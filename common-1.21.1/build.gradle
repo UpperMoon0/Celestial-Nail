@@ -1,0 +1,16 @@
+architectury {
+    common project.enabled_platforms.split(',')
+}
+
+dependencies {
+    implementation project(':common')
+    modImplementation "net.fabricmc:fabric-loader:$fabric_loader_version"
+    modImplementation "dev.architectury:architectury:$architectury_api_version"
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        project(':common').sourceSets.main.output
+    }
+}

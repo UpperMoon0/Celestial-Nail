@@ -1,0 +1,128 @@
+plugins {
+    id 'dev.architectury.loom' version '1.11-SNAPSHOT' apply false
+    id 'architectury-plugin' version '3.4-SNAPSHOT'
+    id 'com.gradleup.shadow' version '8.3.6' apply false
+}
+
+architectury {
+    minecraft = rootProject.findProperty('minecraft_version')
+}
+
+allprojects {
+    group = rootProject.maven_group
+    version = rootProject.mod_version
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+}
+
+def versionGroupFor(String projectName) {
+    return gradle.ext.mcVersionMapping.get(projectName)
+}
+
+def depVersionsFor(String mcVer) {
+    def prefix = mcVer.replace('.', '_')
+    return [
+        minecraft_version: rootProject.findProperty("minecraft_version_${prefix}"),
+        architectury_api_version: rootProject.findProperty("architectury_version_${prefix}"),
+        fabric_loader_version: rootProject.findProperty("fabric_loader_version_${prefix}"),
+        fabric_api_version: rootProject.findProperty("fabric_api_version_${prefix}"),
+        forge_version: rootProject.findProperty("forge_version_${prefix}"),
+        neoforge_version: rootProject.findProperty("neoforge_version_${prefix}"),
+        enabled_platforms: rootProject.findProperty("enabled_platforms_${prefix}")
+    ]
+}
+
+subprojects {
+    if (project.name == 'common' || project.name == 'neoforge-1.21.1' || project.name == 'neoforge-26.1.2') {
+        return
+    }
+
+    apply plugin: 'dev.architectury.loom'
+    apply plugin: 'architectury-plugin'
+    apply plugin: 'maven-publish'
+
+    def mcVer = versionGroupFor(":${project.name}")
+    def deps = depVersionsFor(mcVer)
+
+    project.ext.minecraft_version = deps.minecraft_version
+    project.ext.architectury_api_version = deps.architectury_api_version
+    project.ext.fabric_loader_version = deps.fabric_loader_version
+    project.ext.fabric_api_version = deps.fabric_api_version
+    project.ext.forge_version = deps.forge_version
+    project.ext.neoforge_version = deps.neoforge_version
+    project.ext.enabled_platforms = deps.enabled_platforms
+
+    base {
+        archivesName = "$rootProject.archives_name-$project.name"
+    }
+
+    loom {
+        silentMojangMappingsLicense()
+    }
+
+    dependencies {
+        minecraft "net.minecraft:minecraft:${deps.minecraft_version}"
+        mappings loom.officialMojangMappings()
+    }
+
+    java {
+        withSourcesJar()
+        def javaVersion = mcVer == '1.20.1' ? JavaVersion.VERSION_17 : JavaVersion.VERSION_21
+        sourceCompatibility = javaVersion
+        targetCompatibility = javaVersion
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.release = mcVer == '1.20.1' ? 17 : 21
+        options.encoding = 'UTF-8'
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId = base.archivesName.get()
+                from components.java
+            }
+        }
+    }
+}
+
+def runTargets = [
+    runFabric1201Client: ':fabric-1.20.1:runClient',
+    runForge1201Client: ':forge-1.20.1:runClient',
+    runFabric1211Client: ':fabric-1.21.1:runClient',
+    runNeoForge1211Client: ':neoforge-1.21.1:runClient',
+    runNeoForge2612Client: ':neoforge-26.1.2:runClient',
+    runFabric1201Server: ':fabric-1.20.1:runServer',
+    runForge1201Server: ':forge-1.20.1:runServer',
+    runFabric1211Server: ':fabric-1.21.1:runServer',
+    runNeoForge1211Server: ':neoforge-1.21.1:runServer',
+    runNeoForge2612Server: ':neoforge-26.1.2:runServer'
+]
+runTargets.each { taskName, target ->
+    tasks.register(taskName) {
+        group = 'minecraft'
+        dependsOn target
+    }
+}
+
+tasks.register('testAllVersions') {
+    group = 'verification'
+    description = 'Runs shared unit tests.'
+    dependsOn ':common:test'
+}
+
+tasks.register('buildAll') {
+    group = 'build'
+    description = 'Builds every supported Minecraft/loader target.'
+    dependsOn(
+        ':fabric-1.20.1:build',
+        ':forge-1.20.1:build',
+        ':fabric-1.21.1:build',
+        ':neoforge-1.21.1:build',
+        ':neoforge-26.1.2:build'
+    )
+}

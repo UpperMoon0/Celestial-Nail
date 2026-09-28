@@ -1,0 +1,31 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "celestial_nail"
+version = "${version}"
+displayName = "Celestial Nail"
+authors = "NsTut"
+description = "Multi-version Minecraft mod workspace for Celestial Nail."
+
+[[dependencies.celestial_nail]]
+modId = "forge"
+mandatory = true
+versionRange = "[47,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.celestial_nail]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1]"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.celestial_nail]]
+modId = "architectury"
+mandatory = true
+versionRange = "[9.2.14,)"
+ordering = "AFTER"
+side = "BOTH"
