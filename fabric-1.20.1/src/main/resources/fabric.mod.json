@@ -3,12 +3,13 @@
   "id": "celestial_nail",
   "version": "${version}",
   "name": "Celestial Nail",
-  "description": "Multi-version Minecraft mod workspace for Celestial Nail.",
+  "description": "An administrator-controlled divine strike: summon a persistent Celestial Nail in the sky, then launch it straight down to carve a staged high-power impact crater.",
   "authors": ["NsTut"],
   "license": "All-Rights-Reserved",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.nstut.celestialnail.fabric.CelestialNailFabric"]
+    "main": ["com.nstut.celestialnail.fabric.CelestialNailFabric"],
+    "client": ["com.nstut.celestialnail.fabric.client.CelestialNailFabricClient"]
   },
   "depends": {
     "fabricloader": ">=0.16.14",

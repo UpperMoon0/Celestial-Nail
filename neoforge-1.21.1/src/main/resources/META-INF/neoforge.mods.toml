@@ -7,7 +7,7 @@ modId = "celestial_nail"
 version = "${version}"
 displayName = "Celestial Nail"
 authors = "NsTut"
-description = "Multi-version Minecraft mod workspace for Celestial Nail."
+description = "An administrator-controlled divine strike: summon a persistent Celestial Nail in the sky, then launch it straight down to carve a staged high-power impact crater."
 
 [[dependencies.celestial_nail]]
 modId = "neoforge"
