@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Replaced the block placeholder with a shared detailed stone, gold and crystal entity mesh.
+- Added a default 72-block height and a proportional summon scale argument from 0.1 to 4.
+- Added a synchronized animated rift, clipped nail emergence, hovering crystals and launch closure.
+- Raised the floating portal half a nail-height above the crown while preserving the command tip coordinates, including migration of saved floating nails.
+- Added the supplied opening audio as a ten-second streaming mono Ogg with a smooth fade, preserving its source and conversion tool.
+- Fixed fluid cleanup with bounded top-down water/lava sweeps and safe impact chunk loading.
+- Added geometry, clipping, timing, scale and purge traversal checks, a live fluid smoke test, and reproducible model previews.
+
 ## 0.1.0
 
 - Added the persistent `celestial_nail:celestial_nail` networked entity on every supported loader/version.

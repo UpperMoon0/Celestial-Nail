@@ -1,0 +1,12 @@
+{
+  "portal_open": {
+    "subtitle": "subtitles.celestial_nail.portal_open",
+    "sounds": [
+      {
+        "name": "celestial_nail:portal_open",
+        "stream": true,
+        "attenuation_distance": 512
+      }
+    ]
+  }
+}

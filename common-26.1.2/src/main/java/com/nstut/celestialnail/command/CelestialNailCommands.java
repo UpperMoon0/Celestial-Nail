@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.nstut.celestialnail.entity.CelestialNailEntity;
+import com.nstut.celestialnail.CelestialNailVisuals;
 import com.nstut.celestialnail.entity.CelestialNailIndex;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +29,11 @@ public final class CelestialNailCommands {
             .then(Commands.literal("summon")
                 .then(Commands.argument("id", StringArgumentType.word())
                     .then(Commands.argument("pos", Vec3Argument.vec3())
-                        .executes(ctx -> summon(ctx.getSource(), entityType.get(), StringArgumentType.getString(ctx, "id"), Vec3Argument.getVec3(ctx, "pos"), CelestialNailEntity.DEFAULT_POWER))
+                        .executes(ctx -> summon(ctx.getSource(), entityType.get(), StringArgumentType.getString(ctx, "id"), Vec3Argument.getVec3(ctx, "pos"), CelestialNailEntity.DEFAULT_POWER, 1.0F))
                         .then(Commands.argument("power", FloatArgumentType.floatArg(CelestialNailEntity.MIN_POWER, CelestialNailEntity.MAX_POWER))
-                            .executes(ctx -> summon(ctx.getSource(), entityType.get(), StringArgumentType.getString(ctx, "id"), Vec3Argument.getVec3(ctx, "pos"), FloatArgumentType.getFloat(ctx, "power")))))))
+                            .executes(ctx -> summon(ctx.getSource(), entityType.get(), StringArgumentType.getString(ctx, "id"), Vec3Argument.getVec3(ctx, "pos"), FloatArgumentType.getFloat(ctx, "power"), 1.0F))
+                            .then(Commands.argument("scale", FloatArgumentType.floatArg(CelestialNailVisuals.MIN_SCALE, CelestialNailVisuals.MAX_SCALE))
+                                .executes(ctx -> summon(ctx.getSource(), entityType.get(), StringArgumentType.getString(ctx, "id"), Vec3Argument.getVec3(ctx, "pos"), FloatArgumentType.getFloat(ctx, "power"), FloatArgumentType.getFloat(ctx, "scale"))))))))
             .then(Commands.literal("launch")
                 .then(Commands.argument("id", StringArgumentType.word())
                     .executes(ctx -> launch(ctx.getSource(), StringArgumentType.getString(ctx, "id")))))
@@ -40,7 +43,7 @@ public final class CelestialNailCommands {
             .then(Commands.literal("list").executes(ctx -> list(ctx.getSource()))));
     }
 
-    private static int summon(CommandSourceStack source, EntityType<CelestialNailEntity> type, String id, Vec3 pos, float power) {
+    private static int summon(CommandSourceStack source, EntityType<CelestialNailEntity> type, String id, Vec3 pos, float power, float scale) {
         if (find(source, id) != null) {
             source.sendFailure(Component.literal("Celestial Nail '" + id + "' already exists"));
             return 0;
@@ -53,13 +56,14 @@ public final class CelestialNailCommands {
         }
         nail.configure(id, power);
         nail.setPos(pos.x, pos.y, pos.z);
+        nail.beginSummoning(scale);
         if (!level.addFreshEntity(nail)) {
             source.sendFailure(Component.literal("Failed to add Celestial Nail to the world"));
             return 0;
         }
         CelestialNailIndex.register(source.getServer(), nail);
         nail.forceOwnChunk(level);
-        source.sendSuccess(() -> Component.literal("Summoned Celestial Nail '" + id + "' at " + fmt(pos) + " with power/radius " + power), true);
+        source.sendSuccess(() -> Component.literal("Summoned Celestial Nail '" + id + "' at " + fmt(pos) + " with power/radius " + power + ", height " + nail.nailHeight() + " blocks (scale " + scale + ")"), true);
         return 1;
     }
 
@@ -70,7 +74,7 @@ public final class CelestialNailCommands {
             return 0;
         }
         if (!nail.launch()) {
-            source.sendFailure(Component.literal("Celestial Nail '" + id + "' has already launched"));
+            source.sendFailure(Component.literal("Celestial Nail '" + id + "' has already launched or is still emerging"));
             return 0;
         }
         source.sendSuccess(() -> Component.literal("Launched Celestial Nail '" + id + "'"), true);

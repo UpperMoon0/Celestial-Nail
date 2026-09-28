@@ -1,6 +1,8 @@
 package com.nstut.celestialnail.fabric;
 
 import com.nstut.celestialnail.CelestialNail;
+import com.nstut.celestialnail.CelestialNailSounds;
+import net.minecraft.sounds.SoundEvent;
 import com.nstut.celestialnail.command.CelestialNailCommands;
 import com.nstut.celestialnail.entity.CelestialNailEntity;
 import net.fabricmc.api.ModInitializer;
@@ -16,13 +18,14 @@ public final class CelestialNailFabric implements ModInitializer {
         BuiltInRegistries.ENTITY_TYPE,
         new ResourceLocation(CelestialNail.MOD_ID, "celestial_nail"),
         EntityType.Builder.<CelestialNailEntity>of(CelestialNailEntity::new, MobCategory.MISC)
-            .sized(1.5F, 8.0F).clientTrackingRange(16).updateInterval(1)
+            .sized(1.5F, 8.0F).clientTrackingRange(64).updateInterval(1)
             .build(CelestialNail.MOD_ID + ":celestial_nail")
     );
 
     @Override
     public void onInitialize() {
         CelestialNail.init();
+        Registry.register(BuiltInRegistries.SOUND_EVENT, CelestialNailSounds.PORTAL_ID, CelestialNailSounds.PORTAL_OPEN);
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> CelestialNailCommands.register(dispatcher, () -> NAIL));
     }
 }
