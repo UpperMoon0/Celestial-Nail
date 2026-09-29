@@ -4,11 +4,11 @@ This matrix describes the current source targets. It does not imply that every t
 
 | Minecraft | Loader | Runtime Java | Required dependencies |
 | --- | --- | --- | --- |
-| 1.20.1 | Fabric | 17 | Boom 1.1.0, Fabric API, Architectury API 9.2.14+ |
-| 1.20.1 | Forge | 17 | Boom 1.1.0, Architectury API 9.2.14+ |
-| 1.21.1 | Fabric | 21 | Boom 1.1.0, Fabric API, Architectury API 13.0.8+ |
-| 1.21.1 | NeoForge | 21 | Boom 1.1.0 |
-| 26.1.2 | NeoForge | 25 | Boom 1.1.0 |
+| 1.20.1 | Fabric | 17 | Boom 1.1.0+ (1.x), Fabric API, Architectury API 9.2.14+ |
+| 1.20.1 | Forge | 17 | Boom 1.1.0+ (1.x), Architectury API 9.2.14+ |
+| 1.21.1 | Fabric | 21 | Boom 1.1.0+ (1.x), Fabric API, Architectury API 13.0.8+ |
+| 1.21.1 | NeoForge | 21 | Boom 1.1.0+ (1.x) |
+| 26.1.2 | NeoForge | 25 | Boom 1.1.0+ (1.x) |
 
 Fabric Loader must be at least 0.18.4. The NeoForge 1.21.1 artifact requires NeoForge `[21.1.228,21.2)` and Minecraft `[1.21.1,1.21.2)`. Build pins are in [gradle.properties](../gradle.properties); loader metadata is the install-time authority. Nail declares Boom `>=1.1.0 <2.0.0` and currently develops against 1.1.0. That declared range is not evidence that an arbitrary future Boom release has been tested.
 

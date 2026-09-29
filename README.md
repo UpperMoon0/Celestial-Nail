@@ -21,7 +21,7 @@ Terrain work is spread across server ticks through the required Perfomant Boom l
 
 ## Installation
 
-Install Nail and **Perfomant Boom 1.1.0** for the same Minecraft version and loader on the server and every participating client. In single-player, install both in your client instance. Boom is a separate dependency, not bundled inside Nail.
+Install Nail and **Perfomant Boom 1.1.0 or newer within the 1.x series** for the same Minecraft version and loader on the server and every participating client. In single-player, install both in your client instance. Boom is a separate dependency, not bundled inside Nail.
 
 | Minecraft | Loader | Additional required mods | Java |
 | --- | --- | --- | --- |
