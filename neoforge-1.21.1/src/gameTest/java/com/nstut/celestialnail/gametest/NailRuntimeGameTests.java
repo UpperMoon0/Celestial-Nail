@@ -235,6 +235,62 @@ public final class NailRuntimeGameTests {
         });
     }
 
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_leaf_natural")
+    public static void fullImpactRemovesUnsupportedNaturalBoundaryLeaf(GameTestHelper h) {
+        boundaryLeaves(h,false,false,false);
+    }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_leaf_persistent")
+    public static void fullImpactPreservesPersistentBoundaryLeaf(GameTestHelper h) {
+        boundaryLeaves(h,true,false,false);
+    }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_leaf_supported")
+    public static void fullImpactPreservesSupportedBoundaryLeaf(GameTestHelper h) {
+        boundaryLeaves(h,false,true,false);
+    }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_leaf_adjacent")
+    public static void fullImpactSettlesAdjacentUnsupportedBoundaryLeaves(GameTestHelper h) {
+        boundaryLeaves(h,false,false,true);
+    }
+    private static void boundaryLeaves(GameTestHelper h,boolean persistent,boolean supported,boolean adjacent) {
+        var level=h.getLevel();var center=h.absolutePos(new BlockPos(7,5,7));
+        var leaf=center.offset(1,4,0);var other=center.offset(2,4,0);
+        var state=Blocks.OAK_LEAVES.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.LeavesBlock.DISTANCE,1)
+                .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT,persistent);
+        level.setBlock(leaf.below(),Blocks.OAK_LOG.defaultBlockState(),3);
+        if(supported)level.setBlock(leaf.above(),Blocks.OAK_LOG.defaultBlockState(),3);
+        level.setBlock(leaf,state,3);
+        if(adjacent) {
+            level.setBlock(other.below(),Blocks.OAK_LOG.defaultBlockState(),3);
+            level.setBlock(other,state,3);
+        }
+        var n=nail(level,center,"boundary_leaves",4);long[] finished={-1};
+        h.runAtTickTime(5,()->{
+            h.assertTrue(level.getBlockState(leaf).getValue(net.minecraft.world.level.block.LeavesBlock.DISTANCE)==1,"Leaf fixture lost support before impact");
+            h.assertTrue(level.addFreshEntity(n),"Nail not added");n.forceOwnChunk(level);impact(n,level,center);
+        });
+        h.succeedWhen(()->{
+            h.assertTrue(save(n).getBoolean("BlastCleared"),"Boundary pass is unfinished");
+            if(finished[0]<0)finished[0]=level.getGameTime();
+            h.assertTrue(level.getGameTime()>=finished[0]+10,"Waiting for deferred ticks");
+            h.assertTrue(level.getBlockState(leaf.below()).isAir(),"Supporting log inside sphere survived");
+            if(persistent || supported) {
+                var actual=level.getBlockState(leaf);
+                h.assertTrue(actual.is(Blocks.OAK_LEAVES),"Legitimately supported or persistent leaf was removed");
+                h.assertTrue(actual.getValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT)==persistent,"Persistence changed");
+                h.assertTrue(actual.getValue(net.minecraft.world.level.block.LeavesBlock.DISTANCE)==(supported?1:7),"Leaf support distance stayed stale");
+                if(supported)h.assertTrue(level.getBlockState(leaf.above()).is(Blocks.OAK_LOG),"External support was removed");
+            } else h.assertTrue(level.getBlockState(leaf).isAir(),"Unsupported natural boundary leaf survived");
+            if(adjacent) {
+                h.assertTrue(level.getBlockState(other.below()).isAir(),"Second log survived");
+                h.assertTrue(level.getBlockState(other).isAir(),"Adjacent unsupported natural leaf survived");
+            }
+            h.assertFalse(level.getBlockTicks().hasScheduledTick(leaf,Blocks.OAK_LEAVES),"Deferred support tick escaped reconciliation");
+            h.assertTrue(level.getEntitiesOfClass(ItemEntity.class,new AABB(center).inflate(10)).isEmpty(),"Leaf reconciliation created drops");
+            n.discard();
+        });
+    }
+
     @GameTest(template="empty",timeoutTicks=30,batch="nail_deferred")
     public static void boundarySuppressesDeferredBlockTicksButKeepsFluidsAndOrdinaryTicks(GameTestHelper h) {
         var level=h.getLevel();var pos=h.absolutePos(new BlockPos(3,4,3));

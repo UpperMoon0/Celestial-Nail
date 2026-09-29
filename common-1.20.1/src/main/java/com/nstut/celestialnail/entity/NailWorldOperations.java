@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /** Version adapter for vanilla mutation and persistent, nonblocking forced-chunk requests. */
@@ -37,6 +38,23 @@ public final class NailWorldOperations {
                                 distance>0 && !level.getBlockState(pos.below()).is(net.minecraft.world.level.block.Blocks.SCAFFOLDING));
                 if (!state.getFluidState().isEmpty()) level.scheduleTick(pos,state.getFluidState().getType(),state.getFluidState().getType().getTickDelay(level));
                 return next;
+            }
+            if (state.getBlock() instanceof LeavesBlock) {
+                // Vanilla updateShape only schedules this calculation; the scoped scheduler
+                // suppresses that tick. Resolve the same six-neighbor distance here instead.
+                // The caller has checked those chunks and budgets the resulting replacement.
+                int distance=7;
+                for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.values()) {
+                    var neighbor=level.getBlockState(pos.relative(direction));
+                    distance=Math.min(distance,LeavesBlock.getOptionalDistanceAt(neighbor).orElse(7)+1);
+                    if (distance==1) break;
+                }
+                if (!state.getFluidState().isEmpty()) level.scheduleTick(pos,state.getFluidState().getType(),state.getFluidState().getType().getTickDelay(level));
+                // Do not leave distance-7 natural leaves for random decay, which could drop
+                // items outside the allowance. Persistent leaves retain their other properties.
+                if (distance==7 && !state.getValue(LeavesBlock.PERSISTENT))
+                    return state.getFluidState().createLegacyBlock();
+                return state.setValue(LeavesBlock.DISTANCE,distance);
             }
             // The scoped scheduler drops deferred block effects, but allows external fluid flow.
             return Block.updateFromNeighbourShapes(state, level, pos);
