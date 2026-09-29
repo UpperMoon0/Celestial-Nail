@@ -69,8 +69,44 @@ publishing {
 sourceSets.main.resources.srcDir rootProject.file('common-1.21.1/src/main/resources')
 
 processResources.doLast {
-    def config = file("$destinationDir/celestial_nail.client.mixins.json")
+    ["celestial_nail.client.mixins.json", "celestial_nail.server.mixins.json"].each { configName ->
+    def config = file("$destinationDir/$configName")
     def parsed = new groovy.json.JsonSlurper().parse(config)
     parsed.remove('refmap')
     config.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(parsed)) + '\n'
+    }
+}
+
+// Isolated integration source set: never packaged into the production mod jar.
+sourceSets {
+    gameTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    gameTestImplementation.extendsFrom implementation
+    gameTestRuntimeOnly.extendsFrom runtimeOnly
+}
+neoForge {
+    addModdingDependenciesTo sourceSets.gameTest
+    mods {
+        "${rootProject.mod_id}" { sourceSet sourceSets.gameTest }
+    }
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gameTest
+            gameDirectory = project.file('run/runtime-tests')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'minecraft'
+        }
+    }
+}
+tasks.named('runGameTestServer') {
+    doFirst {
+        copy {
+            from project.file('src/gameTest/resources/gameteststructures')
+            into project.file('run/runtime-tests/gameteststructures')
+        }
+    }
 }

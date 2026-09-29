@@ -63,6 +63,11 @@ public final class CelestialNailAtmosphere {
             double distance=mc.player.position().distanceTo(e.center);
             float near=visible*(float)Math.max(.08,1-distance/640);
             float age=n.summonAge(0),launch=n.launchAge(0),h=n.nailHeight();
+            // Maintain depth coverage in every phase, including ticks 28..1200 after impact.
+            // The buried tip can be much farther from the camera than the visible crown.
+            var camera=mc.gameRenderer.getMainCamera().position();
+            farPlane=Math.max(farPlane,CelestialNailVisuals.bodyFarPlane(
+                    Math.hypot(n.getX()-camera.x,n.getZ()-camera.z),camera.y,n.getY(),h));
             if(impact>CataclysmTimeline.AFTERMATH_TICKS&&!n.isCrumbling()) {
                 farPlane=Math.max(farPlane,Math.abs(n.getY()+h-mc.player.getY())+128);
                 if(e.drone!=null){e.drone.finish();e.drone=null;}
@@ -73,10 +78,11 @@ public final class CelestialNailAtmosphere {
                 if(e.drone!=null){e.drone.finish();e.drone=null;}
                 farPlane=Math.max(farPlane,Math.abs(n.getY()+h-mc.player.getY())+128);
                 float crumble=n.crumbleAge(0);
-                if(crumble>16) for(int j=0;j<8;j++) {
-                    double y=n.getY()+RANDOM.nextDouble()*h-Math.pow(crumble-16,2)*h*.0003;
+                if(crumble>6 && crumble<42) for(int j=0;j<6;j++) {
+                    double band=Math.min(1,Math.max(0,(crumble-6)/14));
+                    double y=n.getY()+h*band+random(h*.075)-Math.pow(Math.max(0,crumble-20),2)*h*.0012;
                     particle(new BlockParticleOption(ParticleTypes.BLOCK,Blocks.STONE.defaultBlockState()),n.getX()+random(h*.1),y,n.getZ()+random(h*.1),random(.08),-.3,random(.08));
-                    if(j<2)particle(ParticleTypes.CLOUD,n.getX()+random(h*.1),y,n.getZ()+random(h*.1),0,-.05,0);
+                    if(j<3)particle(ParticleTypes.CLOUD,n.getX()+random(h*.1),y,n.getZ()+random(h*.1),0,-.05,0);
                 }
                 continue;
             }

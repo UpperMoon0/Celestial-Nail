@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "com.nstut.celestialnail.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "NailBlockTicksMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

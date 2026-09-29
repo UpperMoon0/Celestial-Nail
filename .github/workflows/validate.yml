@@ -49,6 +49,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
       - run: ./gradlew :fabric-1.21.1:build :neoforge-1.21.1:build --stacktrace --no-daemon
+      - name: Runtime lifecycle and world-mutation regressions
+        run: ./gradlew :neoforge-1.21.1:runGameTestServer --stacktrace --no-daemon
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neoforge-1.21.1-runtime-evidence
+          path: neoforge-1.21.1/run/runtime-tests/logs/
+          if-no-files-found: warn
 
   build-26:
     name: Build NeoForge 26.1.2

@@ -4,6 +4,7 @@ import java.util.stream.Stream;
 /** Export the exact game mesh for offline visual inspection, without a Minecraft client. */
 public final class ExportNailMesh {
     public static void main(String[] args) {
+        System.out.println("# bodyFaces=" + CelestialNailMesh.BODY.size() + " height=" + CelestialNailMesh.HEIGHT);
         Stream.concat(CelestialNailMesh.BODY.stream(), CelestialNailMesh.SHARDS.stream()).forEach(f -> {
             System.out.print(f.material() + " " + f.shade());
             for (var p : new CelestialNailMesh.Point[]{f.a(), f.b(), f.c(), f.d()})

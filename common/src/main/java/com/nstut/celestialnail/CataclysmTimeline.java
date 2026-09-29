@@ -17,8 +17,10 @@ public final class CataclysmTimeline {
         return age>=8 && age<=70 && distance<=shockRadius(age) && distance>=shockRadius(Math.max(8,age-interval));
     }
     public static float pierceDepth(float power,float height,float age) {
-        return (power+height*.18F)*CelestialNailVisuals.smooth(age/35);
+        float t=Math.max(0,Math.min(1,age/18));
+        return (power+height*.18F)*(1-(1-t)*(1-t)*(1-t));
     }
+    public static double nextDescentSpeed(double speed) { return Math.min(18,Math.max(2.5,speed)+.65); }
     public static float charge(float launchAge) {
         return launchAge<0 ? 0 : CelestialNailVisuals.smooth(launchAge/24);
     }

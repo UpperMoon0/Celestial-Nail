@@ -25,3 +25,6 @@ side = "BOTH"
 
 [[mixins]]
 config="celestial_nail.client.mixins.json"
+
+[[mixins]]
+config="celestial_nail.server.mixins.json"

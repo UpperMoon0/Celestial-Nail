@@ -126,9 +126,7 @@ public final class CelestialNailMesh {
                 beam(a.add(panel(angle,0,0,.009)),b.add(panel(angle,0,0,.009)),.016,IVORY);
                 if(i==2 || i==7) beam(a,center,.0035,CYAN);
             }
-            // Thin glass glints remain small compared with the azure window, like chipped facets.
-            beam(panel(angle,-width*.11,y+height*.13,depth+.044),panel(angle,-width*.08,y+height*.24,depth+.036),.006,6);
-            beam(panel(angle,width*.16,y-height*.14,depth+.042),panel(angle,width*.18,y-height*.05,depth+.040),.004,CYAN);
+            // Animated glints are shaded on the glass; only structural facet veins use geometry.
             return;
         }
         diamond(angle,y,width,height,depth);
