@@ -107,19 +107,37 @@ public final class NailRuntimeGameTests {
     public static void finishingOverlappingImpactsDoNotTransferOwnershipBack(GameTestHelper h) {
         var level=h.getLevel();var pos=h.absolutePos(new BlockPos(8,4,8));
         var a=nail(level,pos,"owner_a",32);var b=nail(level,pos.offset(1,0,0),"owner_b",32);
-        h.assertTrue(level.addFreshEntity(a)&&level.addFreshEntity(b),"Fixture entities not added");
-        var shared=new ChunkPos(a.chunkPosition().x+1,a.chunkPosition().z);long key=shared.toLong();
-        h.assertFalse(level.getForcedChunks().contains(key),"Fixture temporary chunk was already forced");
+        ChunkPos shared = null;
+        boolean acquired = false;
         try {
+            h.assertTrue(level.addFreshEntity(a)&&level.addFreshEntity(b),"Fixture entities not added");
             impact(a,level,pos);impact(b,level,pos.offset(1,0,0));
-            NailWorldOperations.forceChunk(level,shared);
+            // GameTest's origin is random and its structure chunks are already forced.
+            // Find a real temporary overlap, excluding both anchors and all pre-existing tickets.
+            search: for(int dx=-2;dx<=2;dx++) for(int dz=-2;dz<=2;dz++) {
+                var candidate = new ChunkPos(a.chunkPosition().x+dx,a.chunkPosition().z+dz);
+                if(candidate.equals(a.chunkPosition()) || candidate.equals(b.chunkPosition())
+                        || level.getForcedChunks().contains(candidate.toLong())) continue;
+                boolean inA = com.nstut.celestialnail.CelestialNailMath.chunkIntersectsHorizontalRadius(
+                        candidate.x,candidate.z,pos.getX(),pos.getZ(),32);
+                boolean inB = com.nstut.celestialnail.CelestialNailMath.chunkIntersectsHorizontalRadius(
+                        candidate.x,candidate.z,pos.getX()+1,pos.getZ(),32);
+                if(inA && inB) { shared=candidate;break search; }
+            }
+            h.assertTrue(shared!=null,"No unowned temporary overlap available for fixture");
+            long key=shared.toLong();
+            acquired=NailWorldOperations.forceChunk(level,shared);
+            h.assertTrue(acquired,"Fixture did not acquire its temporary chunk");
             set(a,"ownedImpactForcedChunks",new java.util.HashSet<>(Set.of(key)));
             finish(a,level);
             h.assertTrue(save(b).getLongArray("OwnedImpactForcedChunks").length==1,"First owner did not transfer to active overlapping nail");
             finish(b,level);
             h.assertFalse(level.getForcedChunks().contains(key),"Completed nails exchanged temporary ownership back");
             h.assertTrue(save(a).getLongArray("OwnedImpactForcedChunks").length==0,"Completed first nail reaccepted ownership");
-        } finally {a.discard();b.discard();level.setChunkForced(shared.x,shared.z,false);}
+        } finally {
+            a.discard();b.discard();
+            if(acquired)level.setChunkForced(shared.x,shared.z,false);
+        }
         h.succeed();
     }
     @GameTest(template="empty",timeoutTicks=400,batch="nail_boundary")
