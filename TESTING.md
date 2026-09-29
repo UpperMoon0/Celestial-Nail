@@ -8,7 +8,7 @@ Run Gradle with Java 21. The 26.1.2 module resolves Java 25 for compilation.
 ./gradlew :common:test
 ```
 
-The 28 tests include existing animation/mesh/shell/fluid checks and eight new work-budget/boundary checks. New coverage verifies shared per-level ownership of an allowance, change and scan caps, chunk-request caps, elapsed-time cutoffs, per-tick reset, a six-neighbor brute-force boundary oracle, duplicate rejection, saved-cursor reconstruction, and quadratic traversal at maximum power.
+The 29 tests include existing animation/mesh/shell/fluid checks and eight new work-budget/boundary checks. New coverage verifies shared per-level ownership of an allowance, change and scan caps, chunk-request caps, elapsed-time cutoffs, per-tick reset, a six-neighbor brute-force boundary oracle, duplicate rejection, saved-cursor reconstruction, and quadratic traversal at maximum power.
 
 A budget is cooperative: it limits when the next operation starts. It does not claim to preempt a slow third-party callback or measure end-to-end server/client performance. Current allocation is shared, not a round-robin fairness scheduler.
 
@@ -61,3 +61,12 @@ Older engines suppress nail-scoped `onRemove`/`onPlace` dispatch and explicitly 
 ## Animated shader review without Minecraft
 
 Run `tools/render_nail_shader_job.ps1 -Open` after installing Python `numpy Pillow moderngl glcontext`. It exports the current game mesh, compiles both GLSL variants on the GPU, verifies independent animation/view response and pulse visibility, and produces two GIFs plus a self-contained `build/crystal-glint-preview/preview.html` viewer. The viewer offers play/pause, time scrubbing, speed, rotation, pulse toggle and full/crown/tip views. All mesh, atlas and shader data are embedded; opening the HTML does not require network access or a Minecraft process. Browser review confirmed rendering, camera preset changes, time scrubbing and resumed playback. Studio lighting replaces world lighting; portal/world effects and live-client integration remain outside this preview.
+
+
+## Buried-nail visibility and launch orbit
+
+Debris now advances on the summon clock throughout launch instead of subtracting the launch age. A client mixin skips only the buried origin's compiled/visible terrain-section gate for nail entities; ordinary entities retain vanilla behavior. Nail frustum checks, horizontal fading and depth testing remain active. Camera projection now covers both tip and crown during all phases, including the impact aftermath gap. The shared regression checks body endpoints across deep/raised positions, camera altitudes, viewing distances and nail scales.
+
+All five targets build, the 29 shared tests pass, and the Forge 1.20.1 client boots with the new render mixin. This verifies client startup/injection, not a live visual reproduction of the reported crater-distance issue. Other loaders have build/refmap verification for this change.
+
+Forge 1.20.1 supplies `pack.mcmeta` (resource format 15) in its own resources directory, so both the development directory and packaged mod have valid pack metadata. The package and processed development output were checked; a new startup is needed to clear an already displayed metadata warning.

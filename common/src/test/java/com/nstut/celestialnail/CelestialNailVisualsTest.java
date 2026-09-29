@@ -42,4 +42,16 @@ class CelestialNailVisualsTest {
         }
         assertEquals(108,CelestialNailVisuals.portalHeight(72));
     }
+    @Test void projectionContainsDeepEmbeddedTipAndCrownAcrossScalesAndCameraHeights() {
+        for(float scale:new float[]{.1F,1,4}) for(double tip:new double[]{-220,-64,80,320})
+            for(double cameraY:new double[]{-180,64,400}) for(double horizontal:new double[]{0,64,192,512}) {
+                double height=CelestialNailVisuals.height(scale);
+                double far=CelestialNailVisuals.bodyFarPlane(horizontal,cameraY,tip,height);
+                for(double y:new double[]{tip,tip+height}) {
+                    double farthestEdge=Math.hypot(horizontal+height*.65,y-cameraY);
+                    assertTrue(far>farthestEdge,"Projection clips an endpoint of the tall body");
+                }
+            }
+    }
+
 }

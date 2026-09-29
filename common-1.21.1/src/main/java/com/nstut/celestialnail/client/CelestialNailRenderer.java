@@ -55,7 +55,8 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
         }
 
         if(!impact && crumbleAge<0 && age>=CelestialNailVisuals.READY_TICKS) {
-            float motion=launchAge>=0 ? age-launchAge : age;
+            // Keep the orbit clock continuous through charge, portal closure and descent.
+            float motion=age;
             pose.pushPose();pose.scale(height,height,height);
             pose.mulPose(Axis.YP.rotationDegrees(motion*.18F));
             draw(pose.last(),buffers.getBuffer(CelestialNailSkyRender.TYPE),CelestialNailMesh.DEBRIS,light,Float.POSITIVE_INFINITY,visibility);

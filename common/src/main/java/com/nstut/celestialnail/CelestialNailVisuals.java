@@ -25,4 +25,10 @@ public final class CelestialNailVisuals {
     public static float emergenceOffset(float portalOffset, float age) {
         return portalOffset * (1-emergence(age));
     }
+    /** Conservative camera-space depth bound for the entire tall body, not just its crown. */
+    public static double bodyFarPlane(double horizontalDistance, double cameraY, double tipY, double height) {
+        double vertical=Math.max(Math.abs(tipY-cameraY),Math.abs(tipY+height-cameraY));
+        return Math.hypot(horizontalDistance+height*.65,vertical)+128;
+    }
+
 }

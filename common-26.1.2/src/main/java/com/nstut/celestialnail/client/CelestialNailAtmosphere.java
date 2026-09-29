@@ -63,6 +63,11 @@ public final class CelestialNailAtmosphere {
             double distance=mc.player.position().distanceTo(e.center);
             float near=visible*(float)Math.max(.08,1-distance/640);
             float age=n.summonAge(0),launch=n.launchAge(0),h=n.nailHeight();
+            // Maintain depth coverage in every phase, including ticks 28..1200 after impact.
+            // The buried tip can be much farther from the camera than the visible crown.
+            var camera=mc.gameRenderer.getMainCamera().position();
+            farPlane=Math.max(farPlane,CelestialNailVisuals.bodyFarPlane(
+                    Math.hypot(n.getX()-camera.x,n.getZ()-camera.z),camera.y,n.getY(),h));
             if(impact>CataclysmTimeline.AFTERMATH_TICKS&&!n.isCrumbling()) {
                 farPlane=Math.max(farPlane,Math.abs(n.getY()+h-mc.player.getY())+128);
                 if(e.drone!=null){e.drone.finish();e.drone=null;}
