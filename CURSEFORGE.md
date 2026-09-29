@@ -1,37 +1,69 @@
 # Celestial Nail
 
-Summon a towering celestial monument, open a luminous sky rift, and unleash a cinematic strike that carves a vast crater into your world.
+**Your world is corrupted, Heavenly One. Summon a colossal celestial Nail above a mortal settlement, send it crashing down, and replace its transgressions with a massive crater.** Through administrator commands, decree where the Nail appears, how large it stands, and how much terrain your judgment erases.
 
-Inspired by the Celestial Nails in Genshin Impact, **Celestial Nail** is an administrator-controlled Minecraft mod for dramatic events, creative worlds, and custom server scenarios.
+Your subjects have unearthed forbidden knowledge. They call it “the duper.”
 
-## A strike with a lasting presence
+Their corruption spreads across your world. They call it “a starter base.”
 
-- Watch an ivory-and-crystal Nail emerge through a glowing four-point rift and hover above your chosen location.
-- Choose its size independently of its destructive power: the default Nail stands 72 blocks tall.
-- Launch it straight down to create an expanding destruction wave, with flashes, sound, dust, fragments, and camera effects.
-- Leave the embedded Nail as a permanent landmark, or remove it with a harmless crumble animation.
-- Nails and their impact progress persist with the world.
+**You have heard their explanations. Send down the Nail.**
 
-Terrain clearing is spread across server ticks using **Perfomant Boom**. Large strikes still do substantial work; completion time depends on the world and server.
+## Restore order from above
 
-## Getting started
+Open a luminous sky rift and summon a towering Nail of stone and crystal. Leave it floating above the offending settlement while its inhabitants reconsider their relationship with the heavens.
 
-Enable cheats in single-player or use an account with game-master/operator permission on a server.
+Then launch it.
+
+The Nail descends, unleashes an expanding destruction wave, and remains embedded in the crater as a lasting monument to your moderation policy.
+
+- **A divine presence:** 72 blocks tall at default scale, with an animated emergence and floating sky portal.
+- **Judgment of your choosing:** adjust the Nail’s size independently of its crater radius.
+- **An appropriately dramatic arrival:** flashes, a light column, shockwaves, dust, fragments, sound and camera effects.
+- **Consequences that persist:** Nails and their impact progress save with the world.
+- **Mercy, technically:** cancel an active strike with a harmless crumble animation. Previously destroyed terrain remains destroyed. You are a god, not a backup service.
+
+## Issue your decree
+
+With cheats enabled or game-master/operator permission:
 
 ```text
-/celestialnail summon sky_nail ~ ~80 ~ 32 1
-/celestialnail launch sky_nail
-/celestialnail list
-/celestialnail remove sky_nail
+/celestialnail summon judgment ~ ~80 ~ 32 1
 ```
 
-Wait for the emergence animation to finish before launching. The summon coordinates mark the floating tip and the vertical strike line. In this example, `32` is the crater radius in blocks and `1` is the visual scale.
+Wait for the Nail to finish emerging. Give your subjects a moment to appreciate the architecture.
 
-Power accepts **4–128**, default **32**. Scale accepts **0.1–4**, default **1**. Scaling the model does not change the crater radius. Use a different ID for each Nail.
+```text
+/celestialnail launch judgment
+```
+
+The final two summon arguments are **crater radius** and **visual scale**:
+
+- **Power:** 4–128, default 32.
+- **Scale:** 0.1–4, default 1.
+- Larger appearance does not increase crater radius. Even divine administration has separate controls.
+
+Manage your instruments:
+
+```text
+/celestialnail list
+/celestialnail remove judgment
+```
+
+Use a unique ID for each Nail. Your bureaucracy should be more organized than theirs.
+
+## Before you purify the server
+
+**This is an administrator-controlled world-edit tool.** Impacts intentionally bypass `mobGriefing` and protection that only intercepts ordinary explosions or manual block breaking, including those FTB Chunks claim filters.
+
+Cleared blocks and vanilla container contents **do not drop items**. Living entities can take damage. Removing a Nail stops further damage and clearing, but does not restore what has already been destroyed. Outside fluids may flow back into the crater.
+
+Back up worlds you want to keep. If you share your realm, give your subjects an apocalypse they signed up for.
+
+Terrain work is spread across server ticks through **Perfomant Boom**. Large strikes still take substantial work. Heavenly authority does not upgrade your CPU.
 
 ## Installation
 
-Install Celestial Nail and **Perfomant Boom 1.1.0** for the same Minecraft version and loader on both the server and participating clients. In single-player, install them in your client instance.
+Install **Celestial Nail** and **Perfomant Boom 1.1.0** for the same Minecraft version and loader on both the server and every connecting client. For a local world, install both in your client instance.
 
 | Minecraft | Loader | Other required mods | Java |
 | --- | --- | --- | --- |
@@ -41,18 +73,12 @@ Install Celestial Nail and **Perfomant Boom 1.1.0** for the same Minecraft versi
 | 1.21.1 | NeoForge | None beyond Perfomant Boom | 21 |
 | 26.1.2 | NeoForge | None beyond Perfomant Boom | 25 |
 
-Fabric targets require Fabric Loader **0.18.4 or newer**. Choose the download for your exact game version and loader; the JARs are not interchangeable.
+Fabric requires Loader **0.18.4+**. Choose the file for your exact game version and loader.
 
-## Before launching a strike
+## Inspiration
 
-This is an administrative world-edit tool. **Impacts intentionally bypass `mobGriefing` and protection that only intercepts ordinary explosions or player block breaking, including those FTB Chunks claim filters.** Back up worlds you want to keep and restrict command access accordingly.
-
-Cleared blocks and vanilla container contents do not drop items. Living entities can take damage during the blast. Removing a Nail stops further damage and clearing, but does not restore terrain already removed. Fluids outside the crater can flow back naturally.
-
-## Help and feedback
+A fan-made Minecraft interpretation of Genshin Impact’s Celestial Nails. The divine decrees above are roleplay; “purification” here means destructive terrain editing, not an implemented corruption or forbidden-knowledge system.
 
 [Source and documentation](https://github.com/UpperMoon0/Celestial-Nail) · [Report a problem](https://github.com/UpperMoon0/Celestial-Nail/issues)
 
-For a crash or unexpected impact, include the Minecraft version, loader, Nail and Boom versions, command used, and the crash report or latest log.
-
-Created by **NsTut**. Licensed under the MIT License.
+Created by **NsTut**. Licensed under the **MIT License**.
