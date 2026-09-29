@@ -96,3 +96,5 @@ For an animated GPU review, install Python packages `numpy Pillow moderngl glcon
 The pulse now travels as staggered streams through individual crystal facets with a soft blue afterglow, rather than a continuous bright band. Run `tools/render_nail_shader_job.ps1 -Open` for an interactive offline preview with playback, scrubbing, turntable rotation and close-up views. The generated HTML is self-contained and works without starting Minecraft.
 
 The embedded nail bypasses the terrain-section visibility gate for its buried tip, while retaining depth testing, model frustum culling and horizontal fading. Its camera depth range covers the entire body throughout impact and aftermath.
+
+The portal opening audio has its own horizontal falloff: full strength through half its reach, then a smooth fade to a minimum 512-block radius (or twice the configured render distance, if larger). Portal altitude does not attenuate it. This applies to newly summoned nails received by the client; the server's entity-tracking/view-distance limit still controls which clients receive a nail. Ambient volume and the launch/removal fades still apply.
