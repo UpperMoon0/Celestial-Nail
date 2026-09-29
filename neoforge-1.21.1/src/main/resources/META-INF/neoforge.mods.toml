@@ -12,14 +12,14 @@ description = "An administrator-controlled divine strike: summon a persistent Ce
 [[dependencies.celestial_nail]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.1,)"
+versionRange = "[21.1.228,21.2)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.celestial_nail]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.1,1.22)"
+versionRange = "[1.21.1,1.21.2)"
 ordering = "NONE"
 side = "BOTH"
 
