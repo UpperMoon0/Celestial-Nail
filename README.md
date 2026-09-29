@@ -1,10 +1,10 @@
 # Celestial Nail
 
-Celestial Nail is a fan-made Minecraft adaptation of the celestial pillars seen in Genshin Impact, including Dragonspine's Skyfrost Nail and the Nail in the Chasm. It brings their imposing stone-and-crystal appearance into administrator-controlled world events.
+Celestial Nail is a Minecraft adaptation of the celestial pillars seen in Genshin Impact. It brings their imposing stone-and-crystal appearance into administrator-controlled world events.
 
 ## Inspiration
 
-In Genshin's lore, these Nails were cast down from the heavens and can profoundly alter the surrounding land. Their role includes purifying and stabilizing powers foreign to Teyvat, as Nahida explains; their arrival can also have devastating consequences. See the [Celestial Nail lore overview and in-game references](https://www.hoyodex.com/wiki/genshin-impact/celestial-nail) and [HoYoWiki's Dragonspine entry](https://wiki.hoyolab.com/pc/genshin/entry/5112?lang=en-us).
+In Genshin's lore, these Nails were cast down from the heavens and can profoundly alter the surrounding land. Their role includes purifying and stabilizing powers foreign to Teyvat; their arrival can also have devastating consequences. See the [Celestial Nail lore overview and in-game references](https://www.hoyodex.com/wiki/genshin-impact/celestial-nail) and [HoYoWiki's Dragonspine entry](https://wiki.hoyolab.com/pc/genshin/entry/5112?lang=en-us).
 
 This mod interprets that imagery as a summonable, persistent structure with a staged descent and terrain-clearing impact. The sky portal, adjustable scale, crater radius and removal animation are Minecraft gameplay and visual choices. It does not simulate Genshin's Ley Lines or purification of forbidden knowledge.
 
