@@ -47,9 +47,9 @@ The suite exercises:
 15. Persistent boundary leaves survive while their distance is recalculated to 7 after losing support.
 16. Natural leaves retain distance 1 when a surviving external log supports them.
 17. Adjacent unsupported boundary leaves settle through repeated bounded passes instead of retaining stale mutual support.
-18–19. Complete impacts remove unsupported suspicious sand and gravel, unregister their block entities, and produce neither items nor falling entities.
-20–21. Supported suspicious sand and gravel retain their original live block entities.
-22–23. Complete impacts convert dry boundary coral and preserve coral with surviving external water, checking beyond the native delayed-death interval.
+18-19. Complete impacts remove unsupported suspicious sand and gravel, unregister their block entities, and produce neither items nor falling entities.
+20-21. Supported suspicious sand and gravel retain their original live block entities.
+22-23. Complete impacts convert dry boundary coral and preserve coral with surviving external water, checking beyond the native delayed-death interval.
 24. All twenty vanilla coral variants convert when dry, preserve external hydration/waterlogging, and retain wall-fan orientation.
 
 Some fixtures use reflection to enter the entity's private impact/completion stages deterministically; no test-only accessors are added to production code. These exercise actual ServerLevel/entity/block behavior, but they are not command/network end-to-end tests or process-restart tests.
