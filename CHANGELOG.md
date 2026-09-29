@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Require matching Perfomant Boom 1.1.0 on all five targets.
+- Delegate sphere clearing, fluid purge, boundary repair, budgets and world mutation to Boom.
+- Preserve Nail entity/NBT progress, visual stages, special damage and chunk ownership.
+- Remove duplicate server mutation mixins and transfer reusable cursor/budget tests to Boom.
+- Add CurseForge page copy, compatibility, contributor, architecture and release documentation.
+
 - Kept deep impact/embedded nails alive below vanilla's entity-removal threshold, and made removal terminal for ticking and chunk acquisition.
 - Suppressed vanilla container inventory drops during staged terrain removal, with version-specific block-entity cleanup.
 - Requested persistent forced chunks without the synchronous `ServerLevel.getChunk` path; shared mutation, scan, chunk-request and cooperative time budgets across impacts in each dimension.

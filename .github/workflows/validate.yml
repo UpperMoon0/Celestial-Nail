@@ -35,6 +35,16 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
+      - name: Check out Perfomant Boom API dependency
+        uses: actions/checkout@v4
+        with:
+          repository: UpperMoon0/Perfomant-Boom
+          ref: ${{ vars.PERFOMANT_BOOM_REF || 'main' }}
+          path: .dependencies/perfomant-boom
+          persist-credentials: false
+      - name: Build matching Perfomant Boom artifacts
+        working-directory: .dependencies/perfomant-boom
+        run: bash gradlew :common:publishToMavenLocal :fabric:publishToMavenLocal :forge:publishToMavenLocal --no-daemon --max-workers=2
       - run: ./gradlew :fabric-1.20.1:build :forge-1.20.1:build --stacktrace --no-daemon
 
   build-1211:
@@ -48,6 +58,16 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
+      - name: Check out Perfomant Boom API dependency
+        uses: actions/checkout@v4
+        with:
+          repository: UpperMoon0/Perfomant-Boom
+          ref: ${{ vars.PERFOMANT_BOOM_REF || 'main' }}
+          path: .dependencies/perfomant-boom
+          persist-credentials: false
+      - name: Build matching Perfomant Boom artifacts
+        working-directory: .dependencies/perfomant-boom
+        run: bash gradlew :common-1.21.1:publishToMavenLocal :fabric-1.21.1:publishToMavenLocal :neoforge-1.21.1:publishToMavenLocal --no-daemon --max-workers=2
       - run: ./gradlew :fabric-1.21.1:build :neoforge-1.21.1:build --stacktrace --no-daemon
       - name: Runtime lifecycle and world-mutation regressions
         run: ./gradlew :neoforge-1.21.1:runGameTestServer --stacktrace --no-daemon
@@ -70,4 +90,14 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
+      - name: Check out Perfomant Boom API dependency
+        uses: actions/checkout@v4
+        with:
+          repository: UpperMoon0/Perfomant-Boom
+          ref: ${{ vars.PERFOMANT_BOOM_REF || 'main' }}
+          path: .dependencies/perfomant-boom
+          persist-credentials: false
+      - name: Build matching Perfomant Boom artifacts
+        working-directory: .dependencies/perfomant-boom
+        run: bash gradlew :neoforge-26.1.2:publishToMavenLocal --no-daemon --max-workers=2
       - run: ./gradlew :neoforge-26.1.2:build --stacktrace --no-daemon

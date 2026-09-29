@@ -7,3 +7,6 @@ build/
 out/
 logs/
 __pycache__/
+
+*.log
+.dependencies/

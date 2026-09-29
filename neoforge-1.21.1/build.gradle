@@ -69,7 +69,7 @@ publishing {
 sourceSets.main.resources.srcDir rootProject.file('common-1.21.1/src/main/resources')
 
 processResources.doLast {
-    ["celestial_nail.client.mixins.json", "celestial_nail.server.mixins.json"].each { configName ->
+    ["celestial_nail.client.mixins.json"].each { configName ->
     def config = file("$destinationDir/$configName")
     def parsed = new groovy.json.JsonSlurper().parse(config)
     parsed.remove('refmap')
@@ -110,3 +110,6 @@ tasks.named('runGameTestServer') {
         }
     }
 }
+
+dependencies { implementation "com.nstut:perfomant_boom-neoforge-1.21.1:${rootProject.boom_version}" }
+repositories { mavenLocal(); mavenCentral() }

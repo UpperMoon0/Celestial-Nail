@@ -2,6 +2,15 @@
 
 Celestial Nail is a multi-version Minecraft mod that adds an administrator-controlled divine strike inspired by Genshin Impact's Celestial Nails.
 
+## Documentation
+
+- [CurseForge description](CURSEFORGE.md): ready-to-paste player overview and command quick start.
+- [Compatibility and installation](docs/COMPATIBILITY.md): dependencies, multiplayer setup and troubleshooting.
+- [Contributing](CONTRIBUTING.md) and [architecture](docs/ARCHITECTURE.md): development setup and the Nail/Boom ownership boundary.
+- [Testing](TESTING.md), [releasing](RELEASING.md) and [changelog](CHANGELOG.md).
+
+The project-page icon is [icon.png](icon.png) at the repository root. The CurseForge description and icon are local publishing assets; they do not update the website automatically.
+
 ## Supported targets
 
 | Minecraft | Loader | Java |
@@ -104,3 +113,27 @@ Boundary reconciliation revisits the immediate surviving layer until a full pass
 The boundary pass also recalculates leaf support directly: unsupported natural leaves are removed without drops, while persistent leaves and leaves with surviving support remain. This avoids cancelling vanilla's support-update tick without performing its calculation. Leaf dependencies within the immediate layer settle through the same bounded revisits.
 
 Boundary settlement includes unsupported suspicious sand/gravel (with block-entity cleanup and no falling entities) and dehydrated vanilla coral (converted to its dead counterpart). Supported brushable blocks and hydrated coral are preserved; wall-fan orientation and waterlogging remain intact.
+
+## Perfomant Boom dependency
+
+Install **Perfomant Boom 1.1.0** for the same Minecraft version and loader alongside Nail.
+Fabric targets require Fabric Loader 0.18.4 or newer.
+Nail delegates terrain clearing, fluid purge, boundary repair, work budgets and block
+lifecycle handling to Boom. Its own server mutation mixins and duplicated terrain helpers
+have been removed. Nail still owns effects, strike stages, special damage, saved progress
+and chunk ownership, preserving existing entity NBT fields.
+
+For local development, build the sibling `Perfomant-Boom` checkout first with Java 21:
+
+```sh
+# In Perfomant-Boom
+./gradlew buildAll publishToMavenLocal
+# In Celestial-Nail
+./gradlew buildAll
+./gradlew :neoforge-1.21.1:runGameTestServer
+```
+
+Dependencies use `boom_version` in `gradle.properties`. CI builds the matching Boom
+artifacts from `PERFOMANT_BOOM_REF` (repository variable, default `main`); set that variable
+to the companion Boom change while reviewing the cross-repository migration. Merge the
+Boom API before this consumer. The dependency is external, not bundled into Nail's JAR.

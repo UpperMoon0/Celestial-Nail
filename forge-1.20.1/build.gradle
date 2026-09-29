@@ -63,4 +63,6 @@ remapJar {
     inputFile.set shadowJar.archiveFile
 }
 
-loom { forge { mixinConfig "celestial_nail.client.mixins.json"; mixinConfig "celestial_nail.server.mixins.json" } }
+loom { forge { mixinConfig "celestial_nail.client.mixins.json" } }
+
+dependencies { modImplementation "com.nstut:perfomant_boom-forge:${rootProject.boom_version}" }
