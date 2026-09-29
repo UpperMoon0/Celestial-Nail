@@ -7,6 +7,8 @@ loom {
         runs {
             client {
                 client()
+                // Development uses named Minecraft classes; the packaged refmap is for production.
+                vmArg "-Dmixin.env.disableRefMap=true"
                 runDir("run/client")
             }
             server {

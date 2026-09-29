@@ -80,3 +80,9 @@ Root convenience tasks also provide client/server runs for every supported targe
 ## Verification
 
 See [TESTING.md](TESTING.md) for shared tests, isolated GameTests, their coverage and the remaining cross-version/live-client validation limits. The baseline source audit is recorded in [docs/runtime-audit.md](docs/runtime-audit.md).
+
+## Model review renders
+
+Run `tools/render_nail_job.ps1` to compile and export the actual shared entity mesh, then render the game atlas from front, back, left, right, top and bottom with close-ups. The output is `docs/celestial-nail-model-preview.png`. This is an offline mesh/material review, not an in-game capture; the portal, shader effects and world lighting are excluded. `docs/celestial-nail-model-before.png` preserves the previous design for comparison.
+
+The refined model uses a wider crown, lower asymmetric rear petals, beveled stone-and-gold tracery, elongated glass lancets, irregular stone cap fragments, staggered casing fractures and illuminated cube debris. Its flat facets and nearest-neighbor pixel atlas preserve the Minecraft style. Hidden internal molding caps are omitted to keep the body and crystal debris below the existing 10,000-quad budget.

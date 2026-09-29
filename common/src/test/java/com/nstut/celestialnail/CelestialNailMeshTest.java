@@ -13,7 +13,7 @@ class CelestialNailMeshTest {
         Stream.concat(CelestialNailMesh.BODY.stream(), CelestialNailMesh.SHARDS.stream()).forEach(face -> {
             var n = face.normal();
             assertEquals(1, n.x()*n.x()+n.y()*n.y()+n.z()*n.z(), .001, "Degenerate face normal");
-            assertTrue(face.material() >= 0 && face.material() < 5, "Atlas tile exists");
+            assertTrue(face.material() >= 0 && face.material() < 8, "Atlas tile exists");
             for (var p : new CelestialNailMesh.Point[]{face.a(),face.b(),face.c(),face.d()}) {
                 assertTrue(Float.isFinite(p.x()) && Float.isFinite(p.y()) && Float.isFinite(p.z()));
                 assertTrue(Math.abs(p.x()) < 2 && Math.abs(p.z()) < 2 && p.y() >= -.01 && p.y() < 8,
