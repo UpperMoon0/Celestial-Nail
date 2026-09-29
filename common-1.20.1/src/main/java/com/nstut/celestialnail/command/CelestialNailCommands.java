@@ -85,8 +85,10 @@ public final class CelestialNailCommands {
             source.sendFailure(Component.literal("Unknown Celestial Nail '" + id + "'"));
             return 0;
         }
-        nail.discard();
-        source.sendSuccess(() -> Component.literal("Removed Celestial Nail '" + id + "'"), true);
+        if(!nail.beginCrumbling()) {
+            source.sendFailure(Component.literal("Celestial Nail '"+id+"' is already crumbling"));return 0;
+        }
+        source.sendSuccess(() -> Component.literal("Crumbling Celestial Nail '" + id + "'"), true);
         return 1;
     }
 

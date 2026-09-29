@@ -33,6 +33,7 @@ public final class CelestialNailPortalSound extends AbstractTickableSoundInstanc
             stop(); return;
         }
         float fade=nail.isLaunched() ? 1-CelestialNailVisuals.smooth(nail.launchAge(0)/CelestialNailVisuals.CLOSE_TICKS) : 1;
+        if(nail.isCrumbling())fade*=1-CelestialNailVisuals.smooth(nail.crumbleAge(0)/15);
         this.volume=.85F*fade*CelestialNailAtmosphere.visibility(nail.getX(),nail.getZ());
     }
 }

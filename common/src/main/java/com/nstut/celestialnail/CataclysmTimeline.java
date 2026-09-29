@@ -13,6 +13,12 @@ public final class CataclysmTimeline {
     public static float shake(float sinceArrival) {
         return sinceArrival<0 ? 0 : (float)Math.exp(-sinceArrival/18)*Math.min(1,sinceArrival/2);
     }
+    public static boolean shockHits(double distance,float age,float interval) {
+        return age>=8 && age<=70 && distance<=shockRadius(age) && distance>=shockRadius(Math.max(8,age-interval));
+    }
+    public static float pierceDepth(float power,float height,float age) {
+        return (power+height*.18F)*CelestialNailVisuals.smooth(age/35);
+    }
     public static float charge(float launchAge) {
         return launchAge<0 ? 0 : CelestialNailVisuals.smooth(launchAge/24);
     }

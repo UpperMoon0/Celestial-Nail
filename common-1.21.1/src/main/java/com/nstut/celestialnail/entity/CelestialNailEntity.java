@@ -37,7 +37,7 @@ public final class CelestialNailEntity extends Entity {
     public static final float MAX_POWER = 128.0F;
     private static final byte PHASE_IDLE = 0;
     private static final byte PHASE_DESCENDING = 1;
-    private static final byte PHASE_IMPACT = 2;
+    private static final byte PHASE_IMPACT = 2, PHASE_EMBEDDED = 3, PHASE_CRUMBLING = 4;
     private static final int MAX_BLOCK_CHANGES_PER_TICK = 3000;
     private static final int MAX_SCAN_STEPS_PER_TICK = 45000;
     private static final EntityDataAccessor<String> DATA_NAIL_ID = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.STRING);
@@ -52,6 +52,9 @@ public final class CelestialNailEntity extends Entity {
     public static java.util.function.Consumer<CelestialNailEntity> clientVisualTick = nail -> {};
     public boolean portalSoundStarted;
     private static final EntityDataAccessor<Long> DATA_IMPACT_TIME = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Long> DATA_CRUMBLE_TIME = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Float> DATA_IMPACT_Y = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.FLOAT);
+    private boolean blastCleared;
     private long purgeIndex;
     private int purgePass, purgeWait;
     private double descentSpeed;
@@ -80,6 +83,8 @@ public final class CelestialNailEntity extends Entity {
         builder.define(DATA_LAUNCH_TIME, -1L);
         builder.define(DATA_PORTAL_Y, 0.0F);
         builder.define(DATA_IMPACT_TIME, -1L);
+        builder.define(DATA_CRUMBLE_TIME, -1L);
+        builder.define(DATA_IMPACT_Y, 0F);
     }
 
     public void configure(String id, float power) {
@@ -116,7 +121,22 @@ public final class CelestialNailEntity extends Entity {
         double dx=getX()-cameraX, dz=getZ()-cameraZ;
         return shouldRenderAtSqrDistance(dx*dx+dz*dz);
     }
-    public boolean isImpacting() { return this.entityData.get(DATA_PHASE) == PHASE_IMPACT; }
+    public boolean isImpacting() { return this.entityData.get(DATA_PHASE) == PHASE_IMPACT || isEmbedded(); }
+    public boolean isEmbedded() { return this.entityData.get(DATA_PHASE) == PHASE_EMBEDDED; }
+    public boolean isCrumbling() { return this.entityData.get(DATA_PHASE) == PHASE_CRUMBLING; }
+    public Vec3 impactOrigin() { return new Vec3(getX(),this.entityData.get(DATA_IMPACT_Y),getZ()); }
+    public float crumbleAge(float partial) {
+        long started=this.entityData.get(DATA_CRUMBLE_TIME);
+        return started<0 ? -1 : (float)(level().getGameTime()-started)+partial;
+    }
+    public boolean beginCrumbling() {
+        if(isCrumbling())return false;
+        this.entityData.set(DATA_CRUMBLE_TIME,level().getGameTime());
+        this.entityData.set(DATA_PHASE,PHASE_CRUMBLING);
+        this.setDeltaMovement(Vec3.ZERO);
+        if(level() instanceof ServerLevel server)releaseImpactForcedChunks(server);
+        return true;
+    }
     public void beginSummoning(float scale) {
         this.entityData.set(DATA_SCALE, CelestialNailVisuals.safeScale(scale));
         this.entityData.set(DATA_SUMMON_TIME, this.level().getGameTime());
@@ -139,6 +159,7 @@ public final class CelestialNailEntity extends Entity {
         return distance < range*range;
     }
     public AABB visualBounds() {
+        if(isCrumbling())return new AABB(getX()-nailHeight(),getY()-nailHeight()*3,getZ()-nailHeight(),getX()+nailHeight(),Math.max(getY()+nailHeight(),portalY()),getZ()+nailHeight());
         if(isImpacting())return new AABB(getX()-768,getY()-power(),getZ()-768,getX()+768,getY()+nailHeight()*5,getZ()+768);
         double h=nailHeight(), r=h*.65;
         return new AABB(this.getX()-r, this.getY()-h*.02, this.getZ()-r,
@@ -167,6 +188,11 @@ public final class CelestialNailEntity extends Entity {
         if (this.level().isClientSide) clientVisualTick.accept(this);
         if (this.level() instanceof ServerLevel serverLevel) forceOwnChunk(serverLevel);
         byte phase = this.entityData.get(DATA_PHASE);
+        if(phase==PHASE_CRUMBLING) {
+            // Cancel all terrain mutation and damage immediately; only a timed visual remains.
+            if(level() instanceof ServerLevel && crumbleAge(0)>=80)discard();
+            return;
+        }
         if (phase == PHASE_IDLE) {
             this.setDeltaMovement(Vec3.ZERO);
             return;
@@ -200,6 +226,7 @@ public final class CelestialNailEntity extends Entity {
     private void beginImpact(ServerLevel level, BlockPos center, Vec3 tipPosition) {
         this.entityData.set(DATA_PHASE, PHASE_IMPACT);
         this.entityData.set(DATA_IMPACT_TIME, level.getGameTime());
+        this.entityData.set(DATA_IMPACT_Y,(float)tipPosition.y);
         this.setDeltaMovement(Vec3.ZERO);
         this.impactCenter = center.immutable();
         this.setPos(tipPosition.x, tipPosition.y, tipPosition.z);
@@ -210,17 +237,29 @@ public final class CelestialNailEntity extends Entity {
     }
 
     private void damageEntities(ServerLevel level) {
-        double radius = this.power() * 1.25;
-        AABB box = new AABB(this.impactCenter).inflate(radius);
-        for (Entity entity : level.getEntities(this, box, e -> e instanceof LivingEntity)) {
-            double distance = Math.sqrt(entity.distanceToSqr(Vec3.atCenterOf(this.impactCenter)));
-            if (distance > radius) continue;
-            float damage = (float) Math.max(8.0, (1.0 - distance / radius) * this.power() * 8.0);
+        float age=impactAge(0);
+        double shock=com.nstut.celestialnail.CataclysmTimeline.shockRadius(Math.min(70,age));
+        double radius=Math.max(power()*1.25,age<=70?shock:0);
+        Vec3 origin=impactOrigin();
+        for(Entity entity:level.getEntities(this,new AABB(origin,origin).inflate(radius),e->e instanceof LivingEntity)) {
+            double distance=entity.position().distanceTo(origin);
+            boolean inBlast=distance<=power()*1.25;
+            boolean inWave=com.nstut.celestialnail.CataclysmTimeline.shockHits(distance,age,10);
+            if(!inBlast&&!inWave)continue;
+            float damage=inBlast ? (float)Math.max(4,(1-distance/(power()*1.25))*power()*4)
+                : (float)Math.max(1,power()*.3*(1-distance/800));
             entity.hurt(level.damageSources().magic(), damage);
         }
     }
 
     private void tickImpactWave(ServerLevel level) {
+        float age=impactAge(0);
+        this.setPos(getX(),impactOrigin().y-com.nstut.celestialnail.CataclysmTimeline.pierceDepth(power(),nailHeight(),age),getZ());
+        if((int)age%10==0)damageEntities(level);
+        if(blastCleared) {
+            if(age>=70)this.entityData.set(DATA_PHASE,PHASE_EMBEDDED);
+            return;
+        }
         if (this.fluidPurgeActive) { tickFluidPurge(level); return; }
         int targetRadius = CelestialNailMath.targetRadius(this.power());
         int changed = 0;
@@ -284,8 +323,7 @@ public final class CelestialNailEntity extends Entity {
         level.sendParticles(ParticleTypes.END_ROD, this.getX(), this.getY(), this.getZ(), 160,
                 this.power()*.35, this.power()*.18, this.power()*.35, .12);
         releaseImpactForcedChunks(level);
-        releaseForcedChunk(level);
-        this.discard();
+        this.blastCleared=true;
     }
 
     private int displayedWaveRadius() {
@@ -414,9 +452,14 @@ public final class CelestialNailEntity extends Entity {
 
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
+        this.entityData.set(DATA_CRUMBLE_TIME,tag.contains("CrumbleTime")?tag.getLong("CrumbleTime"):-1L);
+        this.entityData.set(DATA_IMPACT_Y,tag.contains("ImpactYExact")?tag.getFloat("ImpactYExact"):(float)getY());
+        this.blastCleared=tag.getBoolean("BlastCleared");
         this.entityData.set(DATA_IMPACT_TIME, tag.contains("ImpactTime") ? tag.getLong("ImpactTime") : -1L);
         this.configure(tag.getString("NailId"), tag.getFloat("Power"));
         this.entityData.set(DATA_PHASE, tag.getByte("Phase"));
+        if(this.entityData.get(DATA_PHASE)==PHASE_IMPACT && this.entityData.get(DATA_IMPACT_TIME)<0)
+            this.entityData.set(DATA_IMPACT_TIME,level().getGameTime()-70);
         this.entityData.set(DATA_SCALE, CelestialNailVisuals.safeScale(tag.contains("Scale") ? tag.getFloat("Scale") : 1));
         this.entityData.set(DATA_SUMMON_TIME, tag.contains("SummonTime") ? tag.getLong("SummonTime") : -10000L);
         this.entityData.set(DATA_LAUNCH_TIME, tag.contains("LaunchTime") ? tag.getLong("LaunchTime") : (this.isLaunched() ? this.level().getGameTime()-CelestialNailVisuals.CLOSE_TICKS : -1L));
@@ -443,6 +486,9 @@ public final class CelestialNailEntity extends Entity {
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
+        tag.putLong("CrumbleTime",this.entityData.get(DATA_CRUMBLE_TIME));
+        tag.putFloat("ImpactYExact",this.entityData.get(DATA_IMPACT_Y));
+        tag.putBoolean("BlastCleared",blastCleared);
         tag.putLong("ImpactTime", this.entityData.get(DATA_IMPACT_TIME));
         tag.putString("NailId", this.nailId());
         tag.putFloat("Power", this.power());

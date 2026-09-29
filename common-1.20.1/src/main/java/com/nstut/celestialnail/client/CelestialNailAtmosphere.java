@@ -22,7 +22,7 @@ public final class CelestialNailAtmosphere {
         CelestialNailEntity nail;
         Vec3 center;
         long impact=-1;
-        boolean boom, charge, crack;
+        boolean boom, charge, crack, crumbling;
         CelestialNailAtmosphereSound drone;
         Echo(CelestialNailEntity nail) { this.nail=nail; center=nail.position(); }
     }
@@ -32,7 +32,7 @@ public final class CelestialNailAtmosphere {
         resetWorld(mc.level);
         CelestialNailPortalSound.tickEntity(nail);
         Echo echo=ECHOES.computeIfAbsent(nail.getUUID(), id->new Echo(nail));
-        echo.nail=nail; echo.center=nail.position();
+        echo.nail=nail; echo.center=nail.impactAge(0)>=0?nail.impactOrigin():nail.position();
         if (nail.impactAge(0)>=0) echo.impact=nail.level().getGameTime()-(long)nail.impactAge(0);
     }
     private static void resetWorld(Object current) {
@@ -55,7 +55,7 @@ public final class CelestialNailAtmosphere {
         while(it.hasNext()) {
             Echo e=it.next(); CelestialNailEntity n=e.nail;
             float impact=e.impact<0?-1:now-e.impact;
-            if((n.isRemoved()&&e.impact<0)||impact>CataclysmTimeline.AFTERMATH_TICKS) {
+            if(n.isRemoved()&&(e.impact<0||e.crumbling||impact>CataclysmTimeline.AFTERMATH_TICKS)) {
                 if(e.drone!=null)e.drone.finish(); it.remove();continue;
             }
             float visible=visibility(e.center.x,e.center.z);
@@ -63,6 +63,23 @@ public final class CelestialNailAtmosphere {
             double distance=mc.player.position().distanceTo(e.center);
             float near=visible*(float)Math.max(.08,1-distance/640);
             float age=n.summonAge(0),launch=n.launchAge(0),h=n.nailHeight();
+            if(impact>CataclysmTimeline.AFTERMATH_TICKS&&!n.isCrumbling()) {
+                farPlane=Math.max(farPlane,Math.abs(n.getY()+h-mc.player.getY())+128);
+                if(e.drone!=null){e.drone.finish();e.drone=null;}
+                continue;
+            }
+            if(n.isCrumbling()) {
+                if(!e.crumbling){e.crumbling=true;sound("crystal_creak",near*.8F);}
+                if(e.drone!=null){e.drone.finish();e.drone=null;}
+                farPlane=Math.max(farPlane,Math.abs(n.getY()+h-mc.player.getY())+128);
+                float crumble=n.crumbleAge(0);
+                if(crumble>16) for(int j=0;j<8;j++) {
+                    double y=n.getY()+RANDOM.nextDouble()*h-Math.pow(crumble-16,2)*h*.0003;
+                    particle(new BlockParticleOption(ParticleTypes.BLOCK,Blocks.STONE.defaultBlockState()),n.getX()+random(h*.1),y,n.getZ()+random(h*.1),random(.08),-.3,random(.08));
+                    if(j<2)particle(ParticleTypes.CLOUD,n.getX()+random(h*.1),y,n.getZ()+random(h*.1),0,-.05,0);
+                }
+                continue;
+            }
             if(impact<0) {
                 farPlane=Math.max(farPlane,Math.min(32768,Math.abs(n.portalY()+h*1.5-mc.player.getY())+h+128));
                 float presence=CelestialNailVisuals.smooth(age/40)*near;
@@ -84,7 +101,7 @@ public final class CelestialNailAtmosphere {
                         particle(new BlockParticleOption(ParticleTypes.BLOCK,Blocks.STONE.defaultBlockState()),mc.player.getX()+random(12),mc.player.getY()+random(2),mc.player.getZ()+random(12),0,.15+RANDOM.nextDouble()*.2,0);
                 }
             } else {
-                if(e.drone!=null)e.drone.gain=0;
+                if(e.drone!=null){e.drone.finish();e.drone=null;}
                 if(impact<28)farPlane=Math.max(farPlane,Math.abs(e.center.y+h*5-mc.player.getY())+128);
                 float after=CataclysmTimeline.aftermath(impact),arrival=CataclysmTimeline.arrival(distance);
                 darkness=Math.max(darkness,near*.26F*after);

@@ -2,6 +2,7 @@
 import socket
 import struct
 import time
+import re
 from pathlib import Path
 
 root=Path(__file__).resolve().parents[1]
@@ -34,6 +35,11 @@ def passed(command,marker):
 try:
     cmd('forceload add -32 -32 48 48')
     time.sleep(2)
+    cmd('tick freeze')
+    for old in ['default_size','double_size','fluid_test']:
+        cmd('celestialnail remove '+old)
+    cmd('tick sprint 100')
+    time.sleep(2)
     passed('celestialnail summon default_size 0 230 0', 'height 72.0')
     passed('data get entity @e[type=celestial_nail:celestial_nail,limit=1] Scale','1.0f')
     cmd('celestialnail remove default_size')
@@ -48,23 +54,56 @@ try:
     cmd('setblock -8 201 0 oak_fence[waterlogged=true]')
     cmd('setblock 22 201 0 water')
     cmd('fill 32 200 32 40 212 40 air')
+    for tag,x in [('nail_blast_probe',10),('nail_wave_probe',48)]:
+        cmd(f'summon iron_golem {x} 201 0 {{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,Tags:["{tag}"]}}')
+        cmd(f'attribute @e[tag={tag},limit=1] minecraft:generic.max_health base set 1000')
+        cmd(f'data merge entity @e[tag={tag},limit=1] {{Health:1000f}}')
     passed('celestialnail summon fluid_test 0 216 0 16 0.1','height 7.2000003')
     passed('celestialnail launch fluid_test','still emerging')
     # Real server ticks (not time set), including the entire emergence and fluid settling.
     cmd('tick sprint 180')
     time.sleep(3)
     passed('celestialnail launch fluid_test','Launched Celestial Nail')
+    cmd('tick sprint 42')
+    time.sleep(3)
+    def health(tag):
+        return float(re.findall(r'([0-9.]+)f',cmd(f'data get entity @e[tag={tag},limit=1] Health'))[-1])
+    blast_before=health('nail_blast_probe')
+    wave_before=health('nail_wave_probe')
+    cmd('tick sprint 20')
+    time.sleep(3)
+    assert health('nail_blast_probe')<blast_before,'Blast must damage again after initial impact'
+    assert health('nail_wave_probe')<wave_before,'Traveling shockwave must damage beyond crater'
     cmd('tick sprint 400')
     time.sleep(5)
-    passed('celestialnail list','No Celestial Nails')
+    passed('celestialnail list','fluid_test')
+    passed('data get entity @e[type=celestial_nail:celestial_nail,limit=1] Phase','3b')
+    passed('data get entity @e[type=celestial_nail:celestial_nail,limit=1] BlastCleared','1b')
+    stable_health=health('nail_blast_probe')
+    cmd('tick sprint 1200')
+    time.sleep(3)
+    assert health('nail_blast_probe')==stable_health,'Embedded nail must stop dealing damage'
+    passed('celestialnail list','fluid_test')
     passed('execute if blocks -4 200 -4 4 212 4 32 200 32 all','Test passed')
     passed('execute if block 8 201 0 air','Test passed')
     passed('execute if block -8 201 0 air','Test passed')
+    passed('execute if block 22 201 0 water','Test passed')
+    # Removing an embedded nail preserves nearby terrain and fluids, and is visibly timed.
+    cmd('setblock 5 190 0 diamond_block')
+    passed('celestialnail remove fluid_test','Crumbling')
+    passed('data get entity @e[type=celestial_nail:celestial_nail,limit=1] Phase','4b')
+    passed('celestialnail remove fluid_test','already crumbling')
+    cmd('tick sprint 100')
+    time.sleep(3)
+    passed('celestialnail list','No Celestial Nails')
+    passed('execute if block 5 190 0 diamond_block','Test passed')
     passed('execute if block 22 201 0 water','Test passed')
     print('LIVE SMOKE TEST PASSED',flush=True)
 finally:
     (root/'build/portal-smoke-results.log').write_text('\n'.join(log)+'\n')
     cmd('celestialnail remove fluid_test')
+    cmd('kill @e[tag=nail_blast_probe]')
+    cmd('kill @e[tag=nail_wave_probe]')
     cmd('forceload remove -32 -32 48 48')
     cmd('stop')
     sock.close()
