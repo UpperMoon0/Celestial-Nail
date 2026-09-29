@@ -8,7 +8,7 @@ Run Gradle with Java 21. The 26.1.2 module resolves Java 25 for compilation.
 ./gradlew :common:test
 ```
 
-The 29 tests include existing animation/mesh/shell/fluid checks and eight new work-budget/boundary checks. New coverage verifies shared per-level ownership of an allowance, change and scan caps, chunk-request caps, elapsed-time cutoffs, per-tick reset, a six-neighbor brute-force boundary oracle, duplicate rejection, saved-cursor reconstruction, and quadratic traversal at maximum power.
+The 32 tests include existing animation/mesh/shell/fluid checks and eight new work-budget/boundary checks. New coverage verifies shared per-level ownership of an allowance, change and scan caps, chunk-request caps, elapsed-time cutoffs, per-tick reset, a six-neighbor brute-force boundary oracle, duplicate rejection, saved-cursor reconstruction, and quadratic traversal at maximum power.
 
 A budget is cooperative: it limits when the next operation starts. It does not claim to preempt a slow third-party callback or measure end-to-end server/client performance. Current allocation is shared, not a round-robin fairness scheduler.
 
@@ -26,7 +26,7 @@ This compiles and packages Fabric/Forge 1.20.1, Fabric/NeoForge 1.21.1 and NeoFo
 ./gradlew :neoforge-1.21.1:runGameTestServer
 ```
 
-This launches a disposable GameTest server in `neoforge-1.21.1/run/runtime-tests`. It never connects to the player's server or existing smoke world. Tests live in an isolated `gameTest` source set and are not shipped in the production jar. The dedicated runtime task exits nonzero when required tests fail. Successful evidence must include **all ten required tests**, not merely a server startup message.
+This launches a disposable GameTest server in `neoforge-1.21.1/run/runtime-tests`. It never connects to the player's server or existing smoke world. Tests live in an isolated `gameTest` source set and are not shipped in the production jar. The dedicated runtime task exits nonzero when required tests fail. Successful evidence must include **all twelve required tests**, not merely a server startup message.
 
 The suite exercises:
 
@@ -70,3 +70,11 @@ Debris now advances on the summon clock throughout launch instead of subtracting
 All five targets build, the 29 shared tests pass, and the Forge 1.20.1 client boots with the new render mixin. This verifies client startup/injection, not a live visual reproduction of the reported crater-distance issue. Other loaders have build/refmap verification for this change.
 
 Forge 1.20.1 supplies `pack.mcmeta` (resource format 15) in its own resources directory, so both the development directory and packaged mod have valid pack metadata. The package and processed development output were checked; a new startup is needed to clear an already displayed metadata warning.
+
+## Smooth descent and removal fracture
+
+Client position updates interpolate over two ticks instead of snapping. Descent starts at 2.5 blocks/tick, accelerates by 0.65 to a cap of 18, and swept collision still checks the entire traveled segment. Ground penetration uses an 18-tick ease-out, evaluated at partial ticks for rendering. Removal lasts 54 ticks: surface crack flash, staggered fragment release, rigid tumbling around local pivots, accelerating downward movement and dust. Removal still cancels damage and terrain work immediately.
+
+All five builds and 32 shared tests pass. The NeoForge runtime suite now passes twelve required tests, including interpolation without snapping/overshoot and fast descent onto a single-block floor. These checks do not establish live multiplayer smoothness or visual performance on every GPU. The player's running client was left untouched.
+
+For an offline removal preview, first run `tools/render_nail_shader_job.ps1`, then `python tools/preview_crumble.py` with Java 21, the same Python dependencies and ffmpeg available. It exports the production fracture geometry and rigid transforms to an 82-frame, 30 FPS video at `build/crystal-glint-preview/crumble.mp4`, with a local `crumble.html` player and contact sheet. This studio preview excludes the crack overlay, dust, world collision and audio. The contact sheet was inspected and both production shader variants compiled on the GPU.

@@ -31,4 +31,14 @@ class CataclysmTimelineTest {
   assertEquals(0,CataclysmTimeline.charge(-1));
   assertEquals(1,CataclysmTimeline.charge(24));
  }
+ @Test void descentAcceleratesAndPenetrationDeceleratesAfterContact() {
+  double speed=2.5,distance=0;
+  for(int tick=0;tick<20;tick++){double next=CataclysmTimeline.nextDescentSpeed(speed);assertTrue(next>=speed && next<=18);speed=next;distance+=speed;}
+  assertTrue(distance>150,"A long fall should complete decisively");
+  float first=CataclysmTimeline.pierceDepth(32,72,1);
+  float late=CataclysmTimeline.pierceDepth(32,72,17)-CataclysmTimeline.pierceDepth(32,72,16);
+  assertTrue(first>late*10,"Contact must bite hard then settle");
+  assertEquals(CataclysmTimeline.pierceDepth(32,72,18),CataclysmTimeline.pierceDepth(32,72,100));
+ }
+
 }

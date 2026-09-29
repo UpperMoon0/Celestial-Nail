@@ -6,6 +6,7 @@ public final class CelestialNailVisuals {
     public static final float MIN_SCALE = .1F, MAX_SCALE = 4;
     public static final int PORTAL_LAYOUT_VERSION = 2;
     public static final int OPEN_TICKS = 30, EMERGE_TICKS = 140, CLOSE_TICKS = 30;
+    public static final int CRUMBLE_TICKS = 54;
     public static final int READY_TICKS = OPEN_TICKS + EMERGE_TICKS;
     private CelestialNailVisuals() {}
     public static float safeScale(float scale) {

@@ -58,6 +58,29 @@ public final class CelestialNailEntity extends Entity {
     private long purgeIndex;
     private int purgePass, purgeWait;
     private double descentSpeed;
+    private double clientTargetX, clientTargetY, clientTargetZ;
+    private float clientTargetYaw, clientTargetPitch;
+    private int clientLerpSteps;
+
+    private void receiveMovement(double x,double y,double z,float yaw,float pitch) {
+        clientTargetX=x; clientTargetY=y; clientTargetZ=z;
+        clientTargetYaw=yaw; clientTargetPitch=pitch; clientLerpSteps=2;
+    }
+    private void interpolateMovement() {
+        if(clientLerpSteps<=0)return;
+        double alpha=1.0/clientLerpSteps--;
+        setPos(getX()+(clientTargetX-getX())*alpha,getY()+(clientTargetY-getY())*alpha,getZ()+(clientTargetZ-getZ())*alpha);
+        setRot(net.minecraft.util.Mth.rotLerp((float)alpha,getYRot(),clientTargetYaw),
+                net.minecraft.util.Mth.lerp((float)alpha,getXRot(),clientTargetPitch));
+    }
+    @Override
+    public void lerpTo(double x,double y,double z,float yaw,float pitch,int steps) {
+        receiveMovement(x,y,z,yaw,pitch);
+    }
+
+    @Override public double lerpTargetX() { return clientLerpSteps>0?clientTargetX:getX(); }
+    @Override public double lerpTargetY() { return clientLerpSteps>0?clientTargetY:getY(); }
+    @Override public double lerpTargetZ() { return clientLerpSteps>0?clientTargetZ:getZ(); }
     private BlockPos impactCenter = BlockPos.ZERO;
     private int shellRadius;
     private int scanX;
@@ -172,7 +195,7 @@ public final class CelestialNailEntity extends Entity {
         if (this.entityData.get(DATA_PHASE) != PHASE_IDLE || summonAge(0) < CelestialNailVisuals.READY_TICKS) return false;
         this.entityData.set(DATA_PHASE, PHASE_DESCENDING);
         this.entityData.set(DATA_LAUNCH_TIME, this.level().getGameTime());
-        this.descentSpeed = 1.25;
+        this.descentSpeed = 2.5;
         return true;
     }
 
@@ -189,12 +212,12 @@ public final class CelestialNailEntity extends Entity {
         if (isRemoved()) return;
         super.tick();
         if (isRemoved()) return;
-        if (this.level().isClientSide) clientVisualTick.accept(this);
+        if (this.level().isClientSide) { interpolateMovement(); clientVisualTick.accept(this); }
         if (this.level() instanceof ServerLevel serverLevel) forceOwnChunk(serverLevel);
         byte phase = this.entityData.get(DATA_PHASE);
         if(phase==PHASE_CRUMBLING) {
             // Cancel all terrain mutation and damage immediately; only a timed visual remains.
-            if(level() instanceof ServerLevel && crumbleAge(0)>=80)discard();
+            if(level() instanceof ServerLevel && crumbleAge(0)>=CelestialNailVisuals.CRUMBLE_TICKS)discard();
             return;
         }
         if (phase == PHASE_IDLE) {
@@ -223,7 +246,7 @@ public final class CelestialNailEntity extends Entity {
 
     private void tickDescending() {
         if (launchAge(0) < CelestialNailVisuals.CLOSE_TICKS) return;
-        this.descentSpeed = Math.min(8.0, Math.max(1.25, this.descentSpeed + 0.22));
+        this.descentSpeed = com.nstut.celestialnail.CataclysmTimeline.nextDescentSpeed(this.descentSpeed);
         Vec3 from = this.position();
         Vec3 to = from.add(0.0, -this.descentSpeed, 0.0);
         BlockHitResult hit = this.level().clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));

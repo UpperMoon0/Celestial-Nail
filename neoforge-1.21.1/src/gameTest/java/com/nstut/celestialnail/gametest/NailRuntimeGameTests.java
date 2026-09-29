@@ -227,4 +227,32 @@ public final class NailRuntimeGameTests {
         h.succeed();
     }
 
+    @GameTest(template="empty",timeoutTicks=20,batch="nail_motion")
+    public static void receivedMovementInterpolatesWithoutSnappingOrOvershoot(GameTestHelper h) {
+        var level=h.getLevel();var n=nail(level,h.absolutePos(new BlockPos(2,20,2)),"motion",4);
+        double start=n.getY();n.lerpTo(n.getX(),start-12,n.getZ(),0,0,3);
+        h.assertTrue(n.getY()==start,"Position packet snapped immediately");
+        try {
+            Method step=CelestialNailEntity.class.getDeclaredMethod("interpolateMovement");step.setAccessible(true);
+            step.invoke(n);h.assertTrue(Math.abs(n.getY()-(start-6))<.001,"First interpolation step missing");
+            step.invoke(n);h.assertTrue(Math.abs(n.getY()-(start-12))<.001,"Interpolation missed target");
+            step.invoke(n);h.assertTrue(Math.abs(n.getY()-(start-12))<.001,"Interpolation overshot settled target");
+        } catch(ReflectiveOperationException e){throw new AssertionError(e);}
+        n.discard();h.succeed();
+    }
+    @GameTest(template="empty",timeoutTicks=20,batch="nail_fast_descent")
+    public static void acceleratedDescentStillHitsSingleBlockFloor(GameTestHelper h) {
+        var level=h.getLevel();var floor=h.absolutePos(new BlockPos(3,40,3));
+        level.setBlock(floor,Blocks.STONE.defaultBlockState(),3);
+        var n=nail(level,floor.above(60),"fast",4);
+        var tag=save(n);tag.putByte("Phase",(byte)1);tag.putLong("LaunchTime",level.getGameTime()-30);n.load(tag);
+        try {
+            Method fall=CelestialNailEntity.class.getDeclaredMethod("tickDescending");fall.setAccessible(true);
+            for(int i=0;i<20&&!n.isImpacting();i++)fall.invoke(n);
+            h.assertTrue(n.isImpacting(),"Fast descent missed the floor");
+            h.assertTrue(Math.abs(n.impactOrigin().y-(floor.getY()+1))<.001,"Expected floor top "+(floor.getY()+1)+" but impact was "+n.impactOrigin().y);
+        } catch(ReflectiveOperationException e){throw new AssertionError(e);}
+        n.discard();h.succeed();
+    }
+
 }

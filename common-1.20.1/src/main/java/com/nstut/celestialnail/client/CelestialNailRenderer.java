@@ -33,24 +33,26 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
         boolean launched=nail.isLaunched(), impact=nail.isImpacting();
         int light=packedLight;
         float visibility=CelestialNailAtmosphere.visibility(nail.getX(),nail.getZ()), impactAge=nail.impactAge(partialTick), crumbleAge=nail.crumbleAge(partialTick), impactOffset=(float)(nail.impactOrigin().y-net.minecraft.util.Mth.lerp(partialTick,nail.yo,nail.getY()));
+        float bodyImpactAge=impactAge<0?-1:Math.max(0,impactAge-Math.max(0,crumbleAge));
         float open=CelestialNailVisuals.opening(age, launchAge)*(crumbleAge<0?1:1-CelestialNailVisuals.smooth(crumbleAge/15));
         float emergence=CelestialNailVisuals.emergence(age);
         if (age >= CelestialNailVisuals.OPEN_TICKS) {
             float unit=height/CelestialNailMesh.HEIGHT;
-            float offset=impactAge>=0?0:CelestialNailVisuals.emergenceOffset(portalOffset,age-Math.max(0,crumbleAge));
+            float offset=impactAge>=0?impactOffset-com.nstut.celestialnail.CataclysmTimeline.pierceDepth(nail.power(),height,bodyImpactAge):CelestialNailVisuals.emergenceOffset(portalOffset,age-Math.max(0,crumbleAge));
             float bob=launched?0:(float)Math.sin(age*.045F)*height*.0025F*emergence;
             float ceiling=(portalOffset-offset-bob)/unit;
             pose.pushPose();
             pose.translate(0,offset+bob,0);
             pose.scale(unit,unit,unit);
-            pose.mulPose(Axis.YP.rotationDegrees(launchAge>=0?(age-Math.max(0,impactAge)-Math.max(0,crumbleAge))*1.4F:(age-Math.max(0,crumbleAge))*.12F));
+            pose.mulPose(Axis.YP.rotationDegrees(launchAge>=0?(age-Math.max(0,bodyImpactAge)-Math.max(0,crumbleAge))*1.4F:(age-Math.max(0,crumbleAge))*.12F));
             drawBody(pose.last(),buffers.getBuffer(CelestialNailSkyRender.TYPE),light,ceiling,visibility,crumbleAge,age);
             if(crumbleAge<0 && impactAge<0) {
                 float phase=launchAge>=0?Math.max(0,1-launchAge/24):1-(age%100)/100;
                 drawPulse(pose.last(),buffers.getBuffer(CelestialNailSkyRender.TYPE),light,ceiling,visibility,phase);
             }
-            pose.mulPose(Axis.YP.rotationDegrees(age*.8F));
-            draw(pose.last(),buffers.getBuffer(CelestialNailSkyRender.TYPE),CelestialNailMesh.SHARDS,light,ceiling,visibility,age);
+            pose.mulPose(Axis.YP.rotationDegrees((age-Math.max(0,crumbleAge))*.8F));
+            if(crumbleAge<0) draw(pose.last(),buffers.getBuffer(CelestialNailSkyRender.TYPE),CelestialNailMesh.SHARDS,light,ceiling,visibility,age);
+            else drawFragments(pose.last(),buffers.getBuffer(CelestialNailSkyRender.TYPE),CelestialNailFracture.SHARDS,light,ceiling,visibility,crumbleAge,age);
             pose.popPose();
         }
 
@@ -110,24 +112,21 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
     }
     private static void drawBody(PoseStack.Pose pose,VertexConsumer out,int light,float ceiling,float alpha,float crumble,float age) {
         if(crumble<0){draw(pose,out,CelestialNailMesh.BODY,light,ceiling,alpha,age);return;}
-        NailMeshClipper.emit(CelestialNailMesh.BODY,ceiling,(f,p,u,v)->{
-            float cy=(f.a().y()+f.b().y()+f.c().y()+f.d().y())*.25F;
-            float cx=(f.a().x()+f.b().x()+f.c().x()+f.d().x())*.25F;
-            float cz=(f.a().z()+f.b().z()+f.c().z()+f.d().z())*.25F;
-            double sector=Math.floor((Math.atan2(cz,cx)+Math.PI)*4/Math.PI);
-            double seed=Math.sin(Math.floor(cy*2)*73+sector*37)*437.53;
-            float random=(float)(seed-Math.floor(seed));
-            float fall=Math.max(0,crumble-16-random*24);
-            float fade=1-CelestialNailVisuals.smooth((crumble-48)/32);
-            float angle=fall*.018F*(random-.5F),cos=(float)Math.cos(angle),sin=(float)Math.sin(angle);
-            var part=new CelestialNailMesh.Point(p.x()*cos-p.z()*sin+cx*fall*.025F,p.y()-fall*fall*.0022F,p.x()*sin+p.z()*cos+cz*fall*.025F);
-            vertex(pose,out,f,part,u,v,light,alpha*fade,age);
-
-        });
-        if(crumble<16)NailMeshClipper.emit(CelestialNailMesh.BODY,ceiling,(f,p,u,v)->{
+        if(crumble<6)draw(pose,out,CelestialNailMesh.BODY,light,ceiling,alpha,age);
+        else drawFragments(pose,out,CelestialNailFracture.BODY,light,ceiling,alpha,crumble,age);
+        if(crumble<6)NailMeshClipper.emit(CelestialNailMesh.BODY,ceiling,(f,p,u,v)->{
             var crack=new CelestialNailMesh.Point(p.x()+f.normal().x()*.003F,p.y()+f.normal().y()*.003F,p.z()+f.normal().z()*.003F);
-            vertex(pose,out,effectFace(f,10),crack,u,crumble/16,light,alpha);
+            vertex(pose,out,effectFace(f,10),crack,u,v,light,alpha,crumble/6);
         });
+    }
+    private static void drawFragments(PoseStack.Pose pose,VertexConsumer out,List<CelestialNailFracture.Piece> pieces,
+                                      int light,float ceiling,float alpha,float crumble,float age) {
+        for(var piece:pieces) {
+            var motion=CelestialNailFracture.motion(piece,crumble);
+            if(motion.alpha()<.002F)continue;
+            NailMeshClipper.emit(piece.faces(),ceiling,(f,p,u,v)->
+                    vertex(pose,out,f,motion.apply(p),u,v,light,alpha*motion.alpha(),age));
+        }
     }
     private static void draw(PoseStack.Pose pose, VertexConsumer out, List<CelestialNailMesh.Face> faces, int packedLight, float ceiling, float alpha) {
         draw(pose,out,faces,packedLight,ceiling,alpha,-1);
@@ -166,6 +165,7 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
             int seed=(Float.floatToIntBits(face.a().x()*17+face.a().y()*31+face.a().z()*47)&0x7fffffff)%251;
             blue=seed/255F;
         }
+        if(face.material()==10){u=-7+s;v=t;shade=s;green=t;blue=age;}
         out.vertex(pose.pose(), point.x(), point.y(), point.z()).color(shade, green, blue, alpha)
                     .uv(u, v).endVertex();
     }
