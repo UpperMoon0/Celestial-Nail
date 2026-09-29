@@ -60,13 +60,13 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
             pose.translate(0,offset+bob,0);
             pose.scale(unit,unit,unit);
             pose.mulPose(Axis.YP.rotationDegrees(launchAge>=0?(age-Math.max(0,impactAge)-Math.max(0,crumbleAge))*1.4F:(age-Math.max(0,crumbleAge))*.12F));
-            nodes.submitCustomGeometry(pose, CelestialNailSkyRender.TYPE, (transform, out) -> drawBody(transform,out,light,ceiling,visibility,crumbleAge));
+            nodes.submitCustomGeometry(pose, CelestialNailSkyRender.TYPE, (transform, out) -> drawBody(transform,out,light,ceiling,visibility,crumbleAge,age));
             if(crumbleAge<0 && impactAge<0) {
                 float phase=launchAge>=0?Math.max(0,1-launchAge/24):1-(age%100)/100;
                 nodes.submitCustomGeometry(pose,CelestialNailSkyRender.TYPE,(transform,out)->drawPulse(transform,out,light,ceiling,visibility,phase));
             }
             pose.mulPose(Axis.YP.rotationDegrees(age*.8F));
-            nodes.submitCustomGeometry(pose, CelestialNailSkyRender.TYPE, (transform, out) -> draw(transform,out,CelestialNailMesh.SHARDS,light,ceiling,visibility));
+            nodes.submitCustomGeometry(pose, CelestialNailSkyRender.TYPE, (transform, out) -> draw(transform,out,CelestialNailMesh.SHARDS,light,ceiling,visibility,age));
             pose.popPose();
         }
 
@@ -123,8 +123,8 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
             vertex(pose,out,effectFace(f,9),offset,p.y()/CelestialNailMesh.HEIGHT,phase,light,alpha);
         });
     }
-    private static void drawBody(PoseStack.Pose pose,VertexConsumer out,int light,float ceiling,float alpha,float crumble) {
-        if(crumble<0){draw(pose,out,CelestialNailMesh.BODY,light,ceiling,alpha);return;}
+    private static void drawBody(PoseStack.Pose pose,VertexConsumer out,int light,float ceiling,float alpha,float crumble,float age) {
+        if(crumble<0){draw(pose,out,CelestialNailMesh.BODY,light,ceiling,alpha,age);return;}
         NailMeshClipper.emit(CelestialNailMesh.BODY,ceiling,(f,p,u,v)->{
             float cy=(f.a().y()+f.b().y()+f.c().y()+f.d().y())*.25F;
             float cx=(f.a().x()+f.b().x()+f.c().x()+f.d().x())*.25F;
@@ -136,7 +136,7 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
             float fade=1-CelestialNailVisuals.smooth((crumble-48)/32);
             float angle=fall*.018F*(random-.5F),cos=(float)Math.cos(angle),sin=(float)Math.sin(angle);
             var part=new CelestialNailMesh.Point(p.x()*cos-p.z()*sin+cx*fall*.025F,p.y()-fall*fall*.0022F,p.x()*sin+p.z()*cos+cz*fall*.025F);
-            vertex(pose,out,f,part,u,v,light,alpha*fade);
+            vertex(pose,out,f,part,u,v,light,alpha*fade,age);
 
         });
         if(crumble<16)NailMeshClipper.emit(CelestialNailMesh.BODY,ceiling,(f,p,u,v)->{
@@ -145,18 +145,35 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
         });
     }
     private static void draw(PoseStack.Pose pose, VertexConsumer out, List<CelestialNailMesh.Face> faces, int packedLight, float ceiling, float alpha) {
+        draw(pose,out,faces,packedLight,ceiling,alpha,-1);
+    }
+    private static void draw(PoseStack.Pose pose, VertexConsumer out, List<CelestialNailMesh.Face> faces, int packedLight, float ceiling, float alpha, float age) {
         NailMeshClipper.emit(faces,ceiling,(face,point,u,v) -> vertex(pose,out,face,point,u,v,
-                face.emissive()?LightCoordsUtil.FULL_BRIGHT:packedLight,alpha));
+                face.emissive()?LightCoordsUtil.FULL_BRIGHT:packedLight,alpha,age));
     }
     private static void vertex(PoseStack.Pose pose, VertexConsumer out, CelestialNailMesh.Face face,
                                CelestialNailMesh.Point point, float s, float t, int light, float alpha) {
+        vertex(pose,out,face,point,s,t,light,alpha,-1);
+    }
+    private static void vertex(PoseStack.Pose pose, VertexConsumer out, CelestialNailMesh.Face face,
+                               CelestialNailMesh.Point point, float s, float t, int light, float alpha, float age) {
         float u = (face.material() * 16 + .5F + s * 15) / 128.0F;
         float v = (.5F + t * 15) / 16.0F;
         if(face.material()==8){u=-3+s;v=t;}
         if(face.material()==9){u=-5+s;v=t;}
         if(face.material()==10){u=-7+s;v=t;}
         float shade = face.shade() * (face.emissive()?1:.45F+.55F*Math.max((light>>4)&15,(light>>20)&15)/15F);
-        out.addVertex(pose, point.x(), point.y(), point.z()).setColor(shade, shade, shade, alpha)
+        float green=shade, blue=shade;
+        if(age>=0 && (face.material()==3 || face.material()==4 || face.material()==6)) {
+            // Positive UVs outside the atlas opt only nail crystals into the glint shader.
+            // Two color bytes carry a smooth per-entity clock, safe for deferred/batched draws.
+            int clock=Math.round((age%960F)/960F*65535F);
+            green=(clock>>>8)/255F; blue=(clock&255)/255F;
+            u=2+face.material()+s*.9F;
+            int seed=(Float.floatToIntBits(face.a().x()*17+face.a().y()*31+face.a().z()*47)&0x7fffffff)%251;
+            v=seed+t*.9F;
+        }
+        out.addVertex(pose, point.x(), point.y(), point.z()).setColor(shade, green, blue, alpha)
                     .setUv(u, v);
     }
 }
