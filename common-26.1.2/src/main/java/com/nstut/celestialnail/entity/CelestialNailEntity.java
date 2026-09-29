@@ -3,6 +3,8 @@ package com.nstut.celestialnail.entity;
 import com.nstut.celestialnail.CelestialNailMath;
 import com.nstut.celestialnail.CelestialNailVisuals;
 import com.nstut.celestialnail.FluidPurgeCursor;
+import com.nstut.celestialnail.ImpactWorkBudget;
+import com.nstut.celestialnail.SphereBoundaryCursor;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -41,8 +43,6 @@ public final class CelestialNailEntity extends Entity {
     private static final byte PHASE_IDLE = 0;
     private static final byte PHASE_DESCENDING = 1;
     private static final byte PHASE_IMPACT = 2, PHASE_EMBEDDED = 3, PHASE_CRUMBLING = 4;
-    private static final int MAX_BLOCK_CHANGES_PER_TICK = 3000;
-    private static final int MAX_SCAN_STEPS_PER_TICK = 45000;
     private static final EntityDataAccessor<String> DATA_NAIL_ID = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Float> DATA_POWER = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Byte> DATA_PHASE = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.BYTE);
@@ -68,6 +68,8 @@ public final class CelestialNailEntity extends Entity {
     private int scanZ;
     private boolean ownsForcedChunk;
     private boolean fluidPurgeActive;
+    private boolean boundaryActive;
+    private long boundaryIndex;
     private final Set<Long> ownedImpactForcedChunks = new HashSet<>();
 
     public CelestialNailEntity(EntityType<? extends CelestialNailEntity> type, Level level) {
@@ -176,7 +178,9 @@ public final class CelestialNailEntity extends Entity {
 
     @Override
     public void tick() {
+        if (isRemoved()) return;
         super.tick();
+        if (isRemoved()) return;
         if (this.level().isClientSide()) clientVisualTick.accept(this);
         if (this.level() instanceof ServerLevel serverLevel) forceOwnChunk(serverLevel);
         byte phase = this.entityData.get(DATA_PHASE);
@@ -193,6 +197,19 @@ public final class CelestialNailEntity extends Entity {
             tickImpactWave((ServerLevel)this.level());
         }
     }
+
+    /** Deep embedding is intentional; only uncontrolled idle/descending nails use void removal. */
+    @Override
+    protected void onBelowWorld() {
+        if (!isImpacting() && !isCrumbling()) super.onBelowWorld();
+    }
+
+    @Override
+    public boolean isPushedByFluid() { return false; }
+
+    /** The model-sized bounds are visual, not a volume that should interact with fluids. */
+    @Override
+    public AABB getFluidInteractionBox() { return null; }
 
     private void tickDescending() {
         if (launchAge(0) < CelestialNailVisuals.CLOSE_TICKS) return;
@@ -250,17 +267,17 @@ public final class CelestialNailEntity extends Entity {
             if(age>=70)this.entityData.set(DATA_PHASE,PHASE_EMBEDDED);
             return;
         }
+        if (this.boundaryActive) { tickBoundary(level); return; }
         if (this.fluidPurgeActive) { tickFluidPurge(level); return; }
         int targetRadius = CelestialNailMath.targetRadius(this.power());
-        int changed = 0;
-        int scanned = 0;
+        ImpactWorkBudget budget = ImpactWorkBudget.forTick(level, level.getGameTime());
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        while (this.shellRadius <= targetRadius && changed < MAX_BLOCK_CHANGES_PER_TICK && scanned < MAX_SCAN_STEPS_PER_TICK) {
+        while (this.shellRadius <= targetRadius && !isRemoved() && !isCrumbling() && budget.tryScan()) {
             int dx = this.scanX;
             int dy = this.scanY;
             int dz = this.scanZ;
             cursor.set(this.impactCenter.getX() + dx, this.impactCenter.getY() + dy, this.impactCenter.getZ() + dz);
-            if (cursor.getY() >= level.getMinY() && cursor.getY() < level.getMaxY()) {
+            if (!level.isOutsideBuildHeight(cursor)) {
                 if (!ensureImpactChunkReady(level, cursor)) {
                     this.entityData.set(DATA_WAVE_RADIUS, displayedWaveRadius());
                     return;
@@ -268,9 +285,8 @@ public final class CelestialNailEntity extends Entity {
                 var state = level.getBlockState(cursor);
                 // UPDATE_KNOWN_SHAPE prevents neighbor shape updates from scheduling new fluid
                 // cascades behind an inside-out wave. No drops, including waterlogged containers.
-                if (!state.isAir() && level.setBlock(cursor, Blocks.AIR.defaultBlockState(), 2 | 16 | 32)) changed++;
+                if (!state.isAir() && NailWorldOperations.replaceWithoutDrops(level, cursor, Blocks.AIR.defaultBlockState())) budget.changed();
             }
-            scanned++;
             advanceScan();
         }
         this.entityData.set(DATA_WAVE_RADIUS, displayedWaveRadius());
@@ -286,19 +302,18 @@ public final class CelestialNailEntity extends Entity {
         if (this.purgeWait > 0) { this.purgeWait--; return; }
         FluidPurgeCursor scan = new FluidPurgeCursor(CelestialNailMath.targetRadius(power()), this.purgeIndex);
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        int scanned=0, changed=0;
-        while (!scan.done() && scanned < MAX_SCAN_STEPS_PER_TICK && changed < MAX_BLOCK_CHANGES_PER_TICK) {
+        ImpactWorkBudget budget = ImpactWorkBudget.forTick(level, level.getGameTime());
+        while (!scan.done() && !isRemoved() && !isCrumbling() && budget.tryScan()) {
             pos.set(impactCenter.getX()+scan.x(), impactCenter.getY()+scan.y(), impactCenter.getZ()+scan.z());
-            if (scan.inside() && pos.getY() >= level.getMinY() && pos.getY() < level.getMaxY()) {
+            if (scan.inside() && !level.isOutsideBuildHeight(pos)) {
                 if (!ensureImpactChunkReady(level, pos)) { this.purgeIndex=scan.index(); return; }
                 var state=level.getBlockState(pos);
                 if (!state.getFluidState().isEmpty()) {
                     var dry=state.hasProperty(BlockStateProperties.WATERLOGGED)
                             ? state.setValue(BlockStateProperties.WATERLOGGED, false) : Blocks.AIR.defaultBlockState();
-                    if (level.setBlock(pos, dry, 2 | 16 | 32)) changed++;
+                    if (NailWorldOperations.replaceWithoutDrops(level, pos, dry)) budget.changed();
                 }
             }
-            scanned++;
             scan.advance();
         }
         this.purgeIndex=scan.index();
@@ -310,10 +325,49 @@ public final class CelestialNailEntity extends Entity {
             this.purgeWait=40;
             return;
         }
+        this.fluidPurgeActive = false;
+        this.boundaryActive = true;
+        this.boundaryIndex = 0;
+    }
+
+    private void tickBoundary(ServerLevel level) {
+        SphereBoundaryCursor scan = new SphereBoundaryCursor(CelestialNailMath.targetRadius(power()), boundaryIndex);
+        ImpactWorkBudget budget = ImpactWorkBudget.forTick(level, level.getGameTime());
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        while (!scan.done() && !isRemoved() && !isCrumbling() && budget.tryScan()) {
+            pos.set(impactCenter.getX() + scan.x(), impactCenter.getY() + scan.y(), impactCenter.getZ() + scan.z());
+            if (scan.valid() && !level.isOutsideBuildHeight(pos)) {
+                if (!ensureBoundaryReady(level, pos)) { boundaryIndex = scan.index(); return; }
+                var state = level.getBlockState(pos);
+                if (!state.isAir()) {
+                    // Reconcile one surviving boundary layer. Do not unleash recursive neighbor cascades.
+                    var next = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(state, level, pos);
+                    if (next != state && NailWorldOperations.replaceWithoutDrops(level, pos, next)) budget.changed();
+                }
+            }
+            scan.advance();
+        }
+        boundaryIndex = scan.index();
+        if (scan.done() && !isRemoved() && !isCrumbling()) finishBlast(level);
+    }
+
+    private boolean ensureBoundaryReady(ServerLevel level, BlockPos pos) {
+        if (!ensureImpactChunkReady(level, pos)) return false;
+        // Shape calculation reads all six neighbors; none may trigger a synchronous chunk load.
+        for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.values()) {
+            BlockPos neighbor = pos.relative(direction);
+            if (!level.isOutsideBuildHeight(neighbor) && !ensureImpactChunkReady(level, neighbor)) return false;
+        }
+        return true;
+    }
+
+    private void finishBlast(ServerLevel level) {
+        // Become ineligible BEFORE transfer; another finishing impact may run later this tick.
+        this.blastCleared = true;
+        this.boundaryActive = false;
         level.sendParticles(ParticleTypes.END_ROD, this.getX(), this.getY(), this.getZ(), 160,
                 this.power()*.35, this.power()*.18, this.power()*.35, .12);
         releaseImpactForcedChunks(level);
-        this.blastCleared=true;
     }
 
     private int displayedWaveRadius() {
@@ -370,15 +424,17 @@ public final class CelestialNailEntity extends Entity {
         int chunkZ = Math.floorDiv(pos.getZ(), 16);
         long chunkKey = CelestialNailMath.packChunk(chunkX, chunkZ);
         if (level.getForceLoadedChunks().contains(chunkKey)) return false;
-        if (level.setChunkForced(chunkX, chunkZ, true)) this.ownedImpactForcedChunks.add(chunkKey);
+        if (!ImpactWorkBudget.forTick(level, level.getGameTime()).tryRequestChunk()) return false;
+        if (NailWorldOperations.forceChunk(level, new net.minecraft.world.level.ChunkPos(chunkX, chunkZ))) this.ownedImpactForcedChunks.add(chunkKey);
         return false;
     }
 
     private boolean needsForcedChunk(long chunkKey) {
+        if (isRemoved()) return false;
         long ownChunk = CelestialNailMath.packChunk(this.chunkPosition().x(), this.chunkPosition().z());
         if (chunkKey == ownChunk) return true;
-        if (this.entityData.get(DATA_PHASE) != PHASE_IMPACT) return false;
-        return CelestialNailMath.chunkIntersectsHorizontalRadius(CelestialNailMath.unpackChunkX(chunkKey), CelestialNailMath.unpackChunkZ(chunkKey), this.impactCenter.getX(), this.impactCenter.getZ(), CelestialNailMath.targetRadius(this.power()));
+        if (this.entityData.get(DATA_PHASE) != PHASE_IMPACT || this.blastCleared) return false;
+        return CelestialNailMath.chunkIntersectsHorizontalRadius(CelestialNailMath.unpackChunkX(chunkKey), CelestialNailMath.unpackChunkZ(chunkKey), this.impactCenter.getX(), this.impactCenter.getZ(), CelestialNailMath.targetRadius(this.power()) + 2);
     }
 
     private void acceptForcedChunkOwnership(long chunkKey) {
@@ -405,9 +461,10 @@ public final class CelestialNailEntity extends Entity {
         this.ownedImpactForcedChunks.clear();
     }
     public void forceOwnChunk(ServerLevel level) {
+        if (isRemoved()) return;
         var chunk = this.chunkPosition();
         if (!level.getForceLoadedChunks().contains(chunk.pack())) {
-            this.ownsForcedChunk = level.setChunkForced(chunk.x(), chunk.z(), true);
+            this.ownsForcedChunk = NailWorldOperations.forceChunk(level, chunk);
         }
     }
 
@@ -471,6 +528,8 @@ public final class CelestialNailEntity extends Entity {
         this.scanZ = input.getIntOr("ScanZ", -this.shellRadius);
         this.ownsForcedChunk = input.getBooleanOr("OwnsForcedChunk", false);
         this.fluidPurgeActive = input.getBooleanOr("FluidPurgeActive", false);
+        this.boundaryActive = input.getBooleanOr("BoundaryActive", false);
+        this.boundaryIndex = input.getLongOr("BoundaryIndex", 0);
         this.ownedImpactForcedChunks.clear();
         for (ValueInput chunk : input.childrenListOrEmpty("OwnedImpactForcedChunks")) {
             chunk.getLong("Chunk").ifPresent(this.ownedImpactForcedChunks::add);
@@ -505,6 +564,8 @@ public final class CelestialNailEntity extends Entity {
         output.putInt("ScanZ", this.scanZ);
         output.putBoolean("OwnsForcedChunk", this.ownsForcedChunk);
         output.putBoolean("FluidPurgeActive", this.fluidPurgeActive);
+        output.putBoolean("BoundaryActive", this.boundaryActive);
+        output.putLong("BoundaryIndex", this.boundaryIndex);
         var forcedChunks = output.childrenList("OwnedImpactForcedChunks");
         for (long chunkKey : this.ownedImpactForcedChunks) forcedChunks.addChild().putLong("Chunk", chunkKey);
     }

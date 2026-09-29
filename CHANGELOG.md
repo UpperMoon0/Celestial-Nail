@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Kept deep impact/embedded nails alive below vanilla's entity-removal threshold, and made removal terminal for ticking and chunk acquisition.
+- Suppressed vanilla container inventory drops during staged terrain removal, with version-specific block-entity cleanup.
+- Requested persistent forced chunks without the synchronous `ServerLevel.getChunk` path; shared mutation, scan, chunk-request and cooperative time budgets across impacts in each dimension.
+- Disabled full-model fluid interaction scans without changing the nail's rendering or scale.
+- Prevented completed overlapping impacts from accepting temporary forced-chunk ownership back after cleanup.
+- Corrected 26.1.2's inclusive maximum build-height handling for terrain and fluid passes.
+- Added saved, bounded, duplicate-free boundary shape/survival reconciliation without recursive physics cascades.
+- Added eight shared budget/boundary tests and seven isolated NeoForge 1.21.1 server regressions, with runtime execution and log artifacts in CI.
+
 - Replaced the block placeholder with a shared detailed stone, gold and crystal entity mesh.
 - Added a default 72-block height and a proportional summon scale argument from 0.1 to 4.
 - Added a synchronized animated rift, clipped nail emergence, hovering crystals and launch closure.

@@ -74,3 +74,37 @@ processResources.doLast {
     parsed.remove('refmap')
     config.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(parsed)) + '\n'
 }
+
+// Isolated integration source set: never packaged into the production mod jar.
+sourceSets {
+    gameTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    gameTestImplementation.extendsFrom implementation
+    gameTestRuntimeOnly.extendsFrom runtimeOnly
+}
+neoForge {
+    addModdingDependenciesTo sourceSets.gameTest
+    mods {
+        "${rootProject.mod_id}" { sourceSet sourceSets.gameTest }
+    }
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gameTest
+            gameDirectory = project.file('run/runtime-tests')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'minecraft'
+        }
+    }
+}
+tasks.named('runGameTestServer') {
+    doFirst {
+        copy {
+            from project.file('src/gameTest/resources/gameteststructures')
+            into project.file('run/runtime-tests/gameteststructures')
+        }
+    }
+}

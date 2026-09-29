@@ -39,11 +39,13 @@ A summoned Nail is a real persistent, networked entity. It floats in place, disp
 
 ## Impact behavior
 
-On impact, the Nail starts an inside-out spherical destruction wave. During the active blast, nearby living entities take damage every ten ticks; the traveling shock front also damages living entities it reaches outside the crater. Normal damage immunity frames are respected. Damage stops when the blast and wave finish, or immediately when an administrator removes the nail. The nail pierces downward over 35 ticks until its tip is embedded below the crater floor, then remains permanently. Its embedded phase, exact impact height and blast-completion state are saved, so loading the world does not restart the explosion. Terrain is removed in bounded per-tick batches instead of executing one giant vanilla explosion, reducing the single-tick cost of large strikes. Blocks do not drop items.
+On impact, the Nail starts an inside-out spherical destruction wave. During the active blast, nearby living entities take damage every ten ticks; the traveling shock front also damages living entities it reaches outside the crater. Normal damage immunity frames are respected. Damage stops when the blast and wave finish, or immediately when an administrator removes the nail. The nail pierces downward over 35 ticks until its tip is embedded below the crater floor, then remains permanently. Its embedded phase, exact impact height and blast-completion state are saved, so loading the world does not restart the explosion. Terrain is removed in bounded per-tick batches instead of executing one giant vanilla explosion. All impacts in a dimension share a limit of 3,000 block changes, 45,000 scan steps and one new impact-chunk request per tick, plus an eight-millisecond cooperative work window. The window stops before the next operation; it cannot preempt an individual vanilla or mod callback and is not a guaranteed server tick time. Cold impact chunks are requested without synchronously loading them. Blocks and vanilla container inventories do not drop items; custom block callbacks may define additional behavior.
 
-The wave clears fluid-bearing blocks as well as solids, suppresses neighbor-shape update cascades during removal, and finishes with two bounded top-down fluid sweeps separated by a settling period. Source water, flowing water, lava and waterlogged states are cleared inside the sphere. Sources outside the blast remain intact and can subsequently flow naturally; the mod does not install permanent invisible fluid barriers.
+The wave clears fluid-bearing blocks as well as solids, suppresses neighbor-shape update cascades during removal, and finishes with two bounded top-down fluid sweeps separated by a settling period. Source water, flowing water, lava and waterlogged states are cleared inside the sphere, including both valid build-height boundaries. A final bounded pass reconciles the shapes and survival of the one-block six-neighbor boundary. Unsupported attachments in that layer can disappear without drops; fluid ticks scheduled by boundary states are allowed to run naturally. This is not a general recursive redstone/physics settlement pass. Sources outside the blast remain intact and can subsequently flow naturally; the mod does not install permanent invisible fluid barriers.
 
 The destruction path intentionally uses server-authorized direct block mutation rather than a vanilla explosion or player break action. Therefore it intentionally ignores `mobGriefing` and protection filters that only cancel normal explosion/player-grief events, including FTB Chunks claim explosion/break protection. Treat the command as an administrative world-edit operation.
+
+Deep embedding is exempt from vanilla below-world entity disposal, and removed entities cannot reacquire tickets. Visual-sized bounds do not participate in fluid-volume scans. Boundary progress is saved; completed impacts cannot accept temporary impact-ticket ownership.
 
 If a Nail occupies a chunk that was already force-loaded by an administrator or another system, removing the Nail will not un-force that pre-existing chunk. When multiple Nails share one chunk, force-load ownership is transferred until the last owning Nail is removed.
 
@@ -74,3 +76,7 @@ Individual lanes:
 ```
 
 Root convenience tasks also provide client/server runs for every supported target.
+
+## Verification
+
+See [TESTING.md](TESTING.md) for shared tests, isolated GameTests, their coverage and the remaining cross-version/live-client validation limits. The baseline source audit is recorded in [docs/runtime-audit.md](docs/runtime-audit.md).
