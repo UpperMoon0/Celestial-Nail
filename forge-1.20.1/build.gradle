@@ -60,3 +60,5 @@ shadowJar {
 remapJar {
     inputFile.set shadowJar.archiveFile
 }
+
+loom { forge { mixinConfig "celestial_nail.client.mixins.json" } }

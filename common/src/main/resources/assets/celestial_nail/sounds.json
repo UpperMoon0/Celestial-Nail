@@ -8,5 +8,53 @@
         "attenuation_distance": 512
       }
     ]
+  },
+  "presence": {
+    "sounds": [
+      {
+        "name": "celestial_nail:presence",
+        "stream": true
+      }
+    ]
+  },
+  "sky_crack": {
+    "sounds": [
+      {
+        "name": "celestial_nail:sky_crack",
+        "stream": false
+      }
+    ]
+  },
+  "crystal_creak": {
+    "sounds": [
+      {
+        "name": "celestial_nail:crystal_creak",
+        "stream": false
+      }
+    ]
+  },
+  "launch_charge": {
+    "sounds": [
+      {
+        "name": "celestial_nail:launch_charge",
+        "stream": false
+      }
+    ]
+  },
+  "impact_boom": {
+    "sounds": [
+      {
+        "name": "celestial_nail:impact_boom",
+        "stream": false
+      }
+    ]
+  },
+  "aftershock": {
+    "sounds": [
+      {
+        "name": "celestial_nail:aftershock",
+        "stream": false
+      }
+    ]
   }
 }

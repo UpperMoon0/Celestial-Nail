@@ -19,6 +19,7 @@ public final class CelestialNailMesh {
     public static final List<Face> BODY;
     public static final List<Face> SHARDS;
     public static final List<Face> PORTAL_CORE, PORTAL_RIM, PORTAL_HALO, PORTAL_SPARKS, PORTAL_BEAM;
+    public static final List<Face> PULSE_RING, DEBRIS, SHOCK_RING, IMPACT_COLUMN;
     public static final float HEIGHT;
     private final List<Face> faces = new ArrayList<>();
     static {
@@ -58,6 +59,15 @@ public final class CelestialNailMesh {
             model.tri(panel(a,.07,0,0),panel(a,-.07,0,0),p(0,-.55,0),6);
         }
         PORTAL_BEAM=List.copyOf(model.faces);
+        model.faces.clear(); model.ring(-.018,.018,.12,.12,4); PULSE_RING=List.copyOf(model.faces);
+        model.faces.clear();
+        for(int i=0;i<24;i++) {
+            double a=i*2.399963,r=.23+(i%4)*.035,y=.05+(i%8)*.04;
+            model.beam(radial(a,r,y),radial(a+.025,r,y+.017),.012+(i%3)*.004,2);
+        }
+        DEBRIS=List.copyOf(model.faces);
+        model.faces.clear(); model.ring(-.006,.006,.98,1,6); SHOCK_RING=List.copyOf(model.faces);
+        model.faces.clear(); model.ring(0,1,.035,.006,7); IMPACT_COLUMN=List.copyOf(model.faces);
     }
     private static Point p(double x, double y, double z) { return new Point((float)x,(float)y,(float)z); }
     private void face(Point a, Point b, Point c, Point d, int mat) {

@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.nstut.celestialnail.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "MinecraftMixin",
+    "CameraMixin",
+    "GuiMixin",
+    "SoundEngineMixin",
+    "GameRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "celestial_nail.refmap.json"
+}

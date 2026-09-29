@@ -16,7 +16,9 @@ public final class CelestialNailPortalSound extends AbstractTickableSoundInstanc
         this.nail=nail;
         this.looping=false;
         this.x=nail.getX(); this.y=nail.portalY(); this.z=nail.getZ();
-        this.volume=.85F;
+        this.relative=true; this.attenuation=SoundInstance.Attenuation.NONE;
+        this.x=this.y=this.z=0;
+        this.volume=.85F*CelestialNailAtmosphere.visibility(nail.getX(),nail.getZ());
     }
     public static void tickEntity(CelestialNailEntity nail) {
         if (nail.portalSoundStarted) return;
@@ -31,6 +33,6 @@ public final class CelestialNailPortalSound extends AbstractTickableSoundInstanc
             stop(); return;
         }
         float fade=nail.isLaunched() ? 1-CelestialNailVisuals.smooth(nail.launchAge(0)/CelestialNailVisuals.CLOSE_TICKS) : 1;
-        this.volume=.85F*fade;
+        this.volume=.85F*fade*CelestialNailAtmosphere.visibility(nail.getX(),nail.getZ());
     }
 }

@@ -1,0 +1,19 @@
+package com.nstut.celestialnail;
+
+/** Shared, bounded audiovisual timing. Distances are blocks, time is ticks. */
+public final class CataclysmTimeline {
+    public static final int AFTERMATH_TICKS=1200;
+    private CataclysmTimeline() {}
+    public static float horizontalFade(double distance, double range) {
+        return 1-CelestialNailVisuals.smooth((float)((distance-Math.max(0,range-32))/Math.min(32,range)));
+    }
+    public static float shockRadius(float age) { return Math.max(0,age-8)*12; }
+    public static float arrival(double distance) { return 8+(float)distance/12; }
+    public static float aftermath(float age) { return 1-CelestialNailVisuals.smooth(age/AFTERMATH_TICKS); }
+    public static float shake(float sinceArrival) {
+        return sinceArrival<0 ? 0 : (float)Math.exp(-sinceArrival/18)*Math.min(1,sinceArrival/2);
+    }
+    public static float charge(float launchAge) {
+        return launchAge<0 ? 0 : CelestialNailVisuals.smooth(launchAge/24);
+    }
+}

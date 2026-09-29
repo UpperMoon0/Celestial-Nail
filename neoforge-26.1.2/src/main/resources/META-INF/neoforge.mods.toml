@@ -22,3 +22,6 @@ type = "required"
 versionRange = "[26.1.2,26.1.3)"
 ordering = "NONE"
 side = "BOTH"
+
+[[mixins]]
+config="celestial_nail.client.mixins.json"

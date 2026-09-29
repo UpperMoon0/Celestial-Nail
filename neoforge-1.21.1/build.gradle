@@ -65,3 +65,12 @@ publishing {
         }
     }
 }
+
+sourceSets.main.resources.srcDir rootProject.file('common-1.21.1/src/main/resources')
+
+processResources.doLast {
+    def config = file("$destinationDir/celestial_nail.client.mixins.json")
+    def parsed = new groovy.json.JsonSlurper().parse(config)
+    parsed.remove('refmap')
+    config.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(parsed)) + '\n'
+}

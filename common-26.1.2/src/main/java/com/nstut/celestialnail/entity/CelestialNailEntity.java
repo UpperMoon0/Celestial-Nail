@@ -54,6 +54,7 @@ public final class CelestialNailEntity extends Entity {
     private static final EntityDataAccessor<Float> DATA_PORTAL_Y = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.FLOAT);
     public static java.util.function.Consumer<CelestialNailEntity> clientVisualTick = nail -> {};
     public boolean portalSoundStarted;
+    private static final EntityDataAccessor<Long> DATA_IMPACT_TIME = SynchedEntityData.defineId(CelestialNailEntity.class, EntityDataSerializers.LONG);
     private long purgeIndex;
     private int purgePass, purgeWait;
     private double descentSpeed;
@@ -81,6 +82,7 @@ public final class CelestialNailEntity extends Entity {
         builder.define(DATA_SUMMON_TIME, -10000L);
         builder.define(DATA_LAUNCH_TIME, -1L);
         builder.define(DATA_PORTAL_Y, 0.0F);
+        builder.define(DATA_IMPACT_TIME, -1L);
     }
 
     public void configure(String id, float power) {
@@ -103,6 +105,16 @@ public final class CelestialNailEntity extends Entity {
     public float launchAge(float partial) {
         long started=this.entityData.get(DATA_LAUNCH_TIME);
         return started < 0 ? -1 : (float)(this.level().getGameTime()-started)+partial;
+    }
+    public float impactAge(float partial) {
+        long started=this.entityData.get(DATA_IMPACT_TIME);
+        return started < 0 ? -1 : (float)(this.level().getGameTime()-started)+partial;
+    }
+    @Override
+    public boolean shouldRender(double cameraX, double cameraY, double cameraZ) {
+        // Tracking and client horizontal fade retain the world's normal chunk range.
+        double dx=getX()-cameraX, dz=getZ()-cameraZ;
+        return shouldRenderAtSqrDistance(dx*dx+dz*dz);
     }
     public boolean isImpacting() { return this.entityData.get(DATA_PHASE) == PHASE_IMPACT; }
     public void beginSummoning(float scale) {
@@ -127,6 +139,7 @@ public final class CelestialNailEntity extends Entity {
         return distance < range*range;
     }
     public AABB visualBounds() {
+        if(isImpacting())return new AABB(getX()-768,getY()-power(),getZ()-768,getX()+768,getY()+nailHeight()*5,getZ()+768);
         double h=nailHeight(), r=h*.65;
         return new AABB(this.getX()-r, this.getY()-h*.02, this.getZ()-r,
                 this.getX()+r, Math.max(this.getY()+h, portalY()+h*1.4), this.getZ()+r);
@@ -176,12 +189,12 @@ public final class CelestialNailEntity extends Entity {
 
     private void beginImpact(ServerLevel level, BlockPos center, Vec3 tipPosition) {
         this.entityData.set(DATA_PHASE, PHASE_IMPACT);
+        this.entityData.set(DATA_IMPACT_TIME, level.getGameTime());
         this.setDeltaMovement(Vec3.ZERO);
         this.impactCenter = center.immutable();
         this.setPos(tipPosition.x, tipPosition.y, tipPosition.z);
         this.shellRadius = 0;
         resetScanForShell();
-        level.playSound(null, center, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 8.0F, 0.55F);
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, this.getX(), this.getY(), this.getZ(), 6, 1.2, 1.2, 1.2, 0.0);
         damageEntities(level);
     }
@@ -393,6 +406,7 @@ public final class CelestialNailEntity extends Entity {
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
+        this.entityData.set(DATA_IMPACT_TIME, input.getLongOr("ImpactTime", -1L));
         this.configure(input.getStringOr("NailId", ""), input.getFloatOr("Power", DEFAULT_POWER));
         this.entityData.set(DATA_PHASE, input.getByteOr("Phase", PHASE_IDLE));
         this.entityData.set(DATA_SCALE, CelestialNailVisuals.safeScale(input.getFloatOr("Scale", 1)));
@@ -423,6 +437,7 @@ public final class CelestialNailEntity extends Entity {
 
     @Override
     protected void addAdditionalSaveData(ValueOutput output) {
+        output.putLong("ImpactTime", this.entityData.get(DATA_IMPACT_TIME));
         output.putString("NailId", this.nailId());
         output.putFloat("Power", this.power());
         output.putFloat("Scale", nailScale());

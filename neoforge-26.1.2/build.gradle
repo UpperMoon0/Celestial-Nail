@@ -60,3 +60,5 @@ publishing {
         }
     }
 }
+
+sourceSets.main.resources.srcDir rootProject.file('common-26.1.2/src/main/resources')

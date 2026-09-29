@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "com.nstut.celestialnail.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "MinecraftMixin",
+    "CameraMixin",
+    "GuiMixin",
+    "SoundEngineMixin",
+    "RenderTypeInvoker"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
