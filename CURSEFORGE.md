@@ -55,4 +55,4 @@ Cleared blocks and vanilla container contents do not drop items. Living entities
 
 For a crash or unexpected impact, include the Minecraft version, loader, Nail and Boom versions, command used, and the crash report or latest log.
 
-Created by **NsTut**. All Rights Reserved.
+Created by **NsTut**. Licensed under the MIT License.

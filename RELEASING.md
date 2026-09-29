@@ -2,7 +2,7 @@
 
 ## Current automation
 
-[validate.yml](.github/workflows/validate.yml) runs shared tests, all five target builds and the NeoForge 1.21.1 runtime suite. It does **not** publish GitHub or CurseForge releases. Changing `mod_version`, creating a tag or editing the description file does not install an automatic publisher.
+[validate.yml](.github/workflows/validate.yml) runs shared tests, all five target builds, release-tooling regressions and the NeoForge 1.21.1 runtime suite. [release.yml](.github/workflows/release.yml) reuses these checks before packaging and publishing all five artifacts to CurseForge and GitHub. A main-branch version change, an untagged release repair, or a manual run on main can release; feature branches and tag-only pushes do not publish.
 
 ## Prepare a release
 
@@ -20,10 +20,14 @@
 | NeoForge 1.21.1 | `neoforge-1.21.1/build/libs/` |
 | NeoForge 26.1.2 | `neoforge-26.1.2/build/libs/` |
 
-## Manual publication
+## Publication configuration
 
-Publish the reviewed artifacts and release notes to the actual project destinations. Set the exact Minecraft and loader tags per file. Declare Perfomant Boom as a required dependency for every file, Fabric API for Fabric files, and Architectury API for both 1.20.1 loaders and Fabric 1.21.1. Keep Boom external; never upload a combined shaded Nail/Boom JAR.
+Set repository variables `CURSEFORGE_PROJECT_ID` (Nail), `PERFOMANT_BOOM_PROJECT_ID` (Boom), and `PERFOMANT_BOOM_REF` (the full 40-character tested Boom commit SHA), plus the secret `CURSEFORGE_API_TOKEN`. The release preflight rejects missing IDs or an unpinned dependency. The CurseForge job rejects a missing token. No secret is sent to validation jobs.
+
+Add nonempty release notes at `changelog/<mod_version>.md`. Checksums and a source-commit manifest verify the exact artifact set before upload. Existing tags cannot move; releases cannot downgrade the fetched version history. Same-commit retries can finish a draft, while already-public GitHub assets must match their recorded checksums. Inspect partial CurseForge uploads before retrying because the service may reject duplicates.
+
+The workflow publishes the reviewed artifacts and release notes to the configured destinations. Set the exact Minecraft and loader tags per file. Declare Perfomant Boom as a required dependency for every file, Fabric API for Fabric files, and Architectury API for both 1.20.1 loaders and Fabric 1.21.1. Keep Boom external; never upload a combined shaded Nail/Boom JAR.
 
 Paste [CURSEFORGE.md](CURSEFORGE.md) into the project description editor and upload [icon.png](icon.png) as the project icon. These files are local page assets; committing them does not update the website or automatically package the icon into the mod. Verify the published files and dependency declarations after upload. No project ID, credentials or existing published version are assumed by this document.
 
-Nail's metadata declares All Rights Reserved. Keep public license settings consistent with the maintainer's licensing decision.
+Set the public project license to MIT, matching [LICENSE](LICENSE) and the loader metadata.

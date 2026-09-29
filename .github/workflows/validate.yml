@@ -5,9 +5,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
-  group: celestial-nail-validate-${{ github.event.pull_request.number || github.ref }}
+  group: celestial-nail-${{ github.workflow }}-validate-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -101,3 +102,31 @@ jobs:
         working-directory: .dependencies/perfomant-boom
         run: bash gradlew :neoforge-26.1.2:publishToMavenLocal --no-daemon --max-workers=2
       - run: ./gradlew :neoforge-26.1.2:build --stacktrace --no-daemon
+
+  release-tooling:
+    name: Release contract and workflow validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tools -p 'test_release.py' -v
+      - run: python tools/release.py check
+      - name: Validate GitHub Actions workflows
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          directory="$RUNNER_TEMP/actionlint"
+          mkdir -p "$directory"
+          gh release download v1.7.12 --repo rhysd/actionlint \
+            --pattern actionlint_1.7.12_linux_amd64.tar.gz \
+            --pattern actionlint_1.7.12_checksums.txt --dir "$directory"
+          (cd "$directory"; grep '  actionlint_1.7.12_linux_amd64.tar.gz$' actionlint_1.7.12_checksums.txt | sha256sum --check --strict)
+          tar -xzf "$directory/actionlint_1.7.12_linux_amd64.tar.gz" -C "$directory"
+          "$directory/actionlint" -color

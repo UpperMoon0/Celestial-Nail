@@ -137,3 +137,7 @@ Dependencies use `boom_version` in `gradle.properties`. CI builds the matching B
 artifacts from `PERFOMANT_BOOM_REF` (repository variable, default `main`); set that variable
 to the companion Boom change while reviewing the cross-repository migration. Merge the
 Boom API before this consumer. The dependency is external, not bundled into Nail's JAR.
+
+## License
+
+Licensed under the [MIT License](LICENSE).

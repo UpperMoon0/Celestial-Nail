@@ -28,6 +28,6 @@ If you republish Boom under the same version, stop the dev client and run Nail's
 - Use [TESTING.md](TESTING.md) to select meaningful regression and runtime checks. A build does not prove rendering or a complete impact.
 - Update [CHANGELOG.md](CHANGELOG.md), compatibility guidance and [CURSEFORGE.md](CURSEFORGE.md) when users' setup or behavior changes.
 
-CI resolves Boom from repository variable `PERFOMANT_BOOM_REF`, defaulting to `main`. Coordinate API and consumer revisions and land the Boom API first. See [RELEASING.md](RELEASING.md) for release preparation; this repository currently has validation rather than an automated publisher.
+CI resolves Boom from repository variable `PERFOMANT_BOOM_REF`, defaulting to `main`. Coordinate API and consumer revisions and land the Boom API first. See [RELEASING.md](RELEASING.md) for release preparation; the publisher requires configured CurseForge IDs, a pinned Boom commit and passing validation.
 
-The mod metadata declares **All Rights Reserved**. Do not copy another repository's license or change licensing as part of a routine feature or documentation patch.
+Contributions are distributed under the repository's [MIT License](LICENSE). Keep loader metadata consistent with that license.

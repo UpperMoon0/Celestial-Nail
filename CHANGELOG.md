@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Adopt MIT licensing across source, loader metadata and packaged JARs.
+- Add validated five-target CurseForge/GitHub release automation with required project IDs and a pinned Boom dependency.
+
 - Require matching Perfomant Boom 1.1.0 on all five targets.
 - Delegate sphere clearing, fluid purge, boundary repair, budgets and world mutation to Boom.
 - Preserve Nail entity/NBT progress, visual stages, special damage and chunk ownership.
