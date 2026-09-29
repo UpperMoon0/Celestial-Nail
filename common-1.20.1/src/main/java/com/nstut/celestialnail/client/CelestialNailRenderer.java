@@ -112,12 +112,7 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
     }
     private static void drawBody(PoseStack.Pose pose,VertexConsumer out,int light,float ceiling,float alpha,float crumble,float age) {
         if(crumble<0){draw(pose,out,CelestialNailMesh.BODY,light,ceiling,alpha,age);return;}
-        if(crumble<6)draw(pose,out,CelestialNailMesh.BODY,light,ceiling,alpha,age);
-        else drawFragments(pose,out,CelestialNailFracture.BODY,light,ceiling,alpha,crumble,age);
-        if(crumble<6)NailMeshClipper.emit(CelestialNailMesh.BODY,ceiling,(f,p,u,v)->{
-            var crack=new CelestialNailMesh.Point(p.x()+f.normal().x()*.003F,p.y()+f.normal().y()*.003F,p.z()+f.normal().z()*.003F);
-            vertex(pose,out,effectFace(f,10),crack,u,v,light,alpha,crumble/6);
-        });
+        drawFragments(pose,out,CelestialNailFracture.BODY,light,ceiling,alpha,crumble,age);
     }
     private static void drawFragments(PoseStack.Pose pose,VertexConsumer out,List<CelestialNailFracture.Piece> pieces,
                                       int light,float ceiling,float alpha,float crumble,float age) {
@@ -145,7 +140,6 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
         float v = (.5F + t * 15) / 16.0F;
         if(face.material()==8){u=-3+s;v=t;}
         if(face.material()==9){u=-5+s;v=t;}
-        if(face.material()==10){u=-7+s;v=t;}
         float shade = face.shade() * (face.emissive()?1:.45F+.55F*Math.max((light>>4)&15,(light>>20)&15)/15F);
         float green=shade, blue=shade;
         if(age>=0 && (face.material()==3 || face.material()==4 || face.material()==6)) {
@@ -165,7 +159,6 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
             int seed=(Float.floatToIntBits(face.a().x()*17+face.a().y()*31+face.a().z()*47)&0x7fffffff)%251;
             blue=seed/255F;
         }
-        if(face.material()==10){u=-7+s;v=t;shade=s;green=t;blue=age;}
         out.vertex(pose.pose(), point.x(), point.y(), point.z()).color(shade, green, blue, alpha)
                     .uv(u, v).endVertex();
     }

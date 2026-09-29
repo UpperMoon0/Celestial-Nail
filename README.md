@@ -33,7 +33,7 @@ On summon, a luminous four-point rift opens over 1.5 seconds. The nail emerges t
 
 The supplied audio source is preserved at `assets/audio/portal-source.mp3`; the game streams a 10-second mono Ogg Vorbis opening excerpt with a two-second fade-out from `common/src/main/resources/assets/celestial_nail/sounds/portal_open.ogg`. Regenerate it with `tools/prepare_portal_audio.ps1` (FFmpeg required).
 
-`/celestialnail remove <id>` starts a 2.7-second harmless removal: a brief blue fracture flash spreads into thick tumbling fragments and dust, then the entity disappears. This works while emerging, floating, descending, impacting or embedded. Removal cancels all further damage and terrain clearing immediately; the visual debris never places or breaks blocks. Repeating the command does not restart the animation.
+`/celestialnail remove <id>` starts a 2.7-second harmless removal: stone sections subtly separate along real fragment boundaries before releasing into thick tumbling fragments and dust, then the entity disappears. This works while emerging, floating, descending, impacting or embedded. Removal cancels all further damage and terrain clearing immediately; the visual debris never places or breaks blocks. Repeating the command does not restart the animation.
 
 A summoned Nail is a real persistent, networked entity. It floats in place, displays its ID, and force-loads only its own chunk so it remains addressable after players leave or the server restarts. `/celestialnail launch <id>` accelerates it straight down until its tip intersects terrain.
 

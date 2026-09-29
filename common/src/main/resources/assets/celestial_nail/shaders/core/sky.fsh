@@ -71,17 +71,7 @@ vec4 effect(vec2 uv,vec4 color){
   vec3 tint=mix(vec3(.055,.32,.85),vec3(.48,.91,1.0),front*.8+silk*.2);
   return vec4(tint,min(.48,energy)*color.a);
  }
- // Surface-anchored hairline fractures flare briefly before pieces separate.
- vec2 p=vec2(uv.x+7.0,uv.y);
- float progress=color.b;
- float aa=max(fwidth(p.x),fwidth(p.y));
- float spine=abs(p.x-(.48+.07*sin(p.y*23.0)+.025*sin(p.y*61.0)));
- float branch=abs(fract(p.y*3.0+p.x*.8)-.5);
- float veins=max(1.0-smoothstep(.002,.005+aa,spine),
-                 (1.0-smoothstep(.002,.004+aa,branch))*smoothstep(.38,.52,p.x));
- float reveal=smoothstep(p.y*.55,p.y*.55+.25,progress);
- float flash=sin(clamp(progress,0.0,1.0)*3.14159265);
- return vec4(.48,.91,1.0,veins*reveal*flash*.7*color.a);
+ return vec4(0.0);
 }
 void main(){
  vec4 c=texCoord0.x>=2.0 ? crystal(texCoord0,vertexColor) : texCoord0.x<0.0 ? effect(texCoord0,vertexColor) : texture(Sampler0,texCoord0)*vertexColor;

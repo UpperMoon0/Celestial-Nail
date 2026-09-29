@@ -87,11 +87,14 @@ public final class CelestialNailFracture {
     public static Motion motion(Piece piece,float age) {
         Point p=piece.pivot();float seed=piece.seed();
         float release=6+p.y()/CelestialNailMesh.HEIGHT*9+seed*4;
+        // Open actual fragment boundaries before release, instead of painting cracks on each face.
+        float strain=CelestialNailVisuals.smooth((age-(release-6))/6);
+        float separation=strain*(.008F+seed*.009F);
         float fall=Math.max(0,age-release);
         float impulse=CelestialNailVisuals.smooth(fall/4);
-        float yaw=fall*(seed-.5F)*.065F,roll=fall*(.018F+seed*.023F)*(seed>.5F?1:-1);
+        float yaw=(strain*.008F+fall*.065F)*(seed-.5F),roll=(strain*.004F+fall*(.018F+seed*.023F))*(seed>.5F?1:-1);
         float length=(float)Math.hypot(p.x(),p.z());
-        float burst=(.045F*impulse+fall*.009F)*( .65F+seed*.7F);
+        float burst=separation+(.045F*impulse+fall*.009F)*( .65F+seed*.7F);
         float alpha=1-CelestialNailVisuals.smooth((fall-18)/17);
         return new Motion(p,(float)Math.cos(yaw),(float)Math.sin(yaw),(float)Math.cos(roll),(float)Math.sin(roll),
                 length<.001F?0:p.x()/length*burst,-.012F*fall*fall,length<.001F?0:p.z()/length*burst,alpha);
