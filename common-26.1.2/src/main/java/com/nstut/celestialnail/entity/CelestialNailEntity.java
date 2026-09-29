@@ -97,6 +97,7 @@ public final class CelestialNailEntity extends Entity {
     private boolean ownsForcedChunk;
     private boolean fluidPurgeActive;
     private boolean boundaryActive;
+    private boolean boundaryChanged;
     private long boundaryIndex;
     private final Set<Long> ownedImpactForcedChunks = new HashSet<>();
 
@@ -356,6 +357,7 @@ public final class CelestialNailEntity extends Entity {
         this.fluidPurgeActive = false;
         this.boundaryActive = true;
         this.boundaryIndex = 0;
+        this.boundaryChanged = false;
     }
 
     private void tickBoundary(ServerLevel level) {
@@ -370,13 +372,24 @@ public final class CelestialNailEntity extends Entity {
                 if (!state.isAir()) {
                     // Reconcile one surviving boundary layer. Do not unleash recursive neighbor cascades.
                     var next = NailWorldOperations.reconcileBoundary(level, pos, state);
-                    if (next != state && NailWorldOperations.replaceWithoutDrops(level, pos, next)) budget.changed();
+                    if (next != state && NailWorldOperations.replaceWithoutDrops(level, pos, next)) {
+                        budget.changed();
+                        boundaryChanged = true;
+                    }
                 }
             }
             scan.advance();
         }
         boundaryIndex = scan.index();
-        if (scan.done() && !isRemoved() && !isCrumbling()) finishBlast(level);
+        if (scan.done() && !isRemoved() && !isCrumbling()) {
+            // Neighbor support distances may have been stale earlier in this pass. Revisit
+            // the same layer next tick until a complete pass is unchanged. Each visit still
+            // consumes the shared scan/change/time budget; never enable native survival ticks.
+            if (boundaryChanged) {
+                boundaryIndex = 0;
+                boundaryChanged = false;
+            } else finishBlast(level);
+        }
     }
 
     private boolean ensureBoundaryReady(ServerLevel level, BlockPos pos) {
@@ -558,6 +571,7 @@ public final class CelestialNailEntity extends Entity {
         this.fluidPurgeActive = input.getBooleanOr("FluidPurgeActive", false);
         this.boundaryActive = input.getBooleanOr("BoundaryActive", false);
         this.boundaryIndex = input.getLongOr("BoundaryIndex", 0);
+        this.boundaryChanged = input.getBooleanOr("BoundaryChanged", this.boundaryActive);
         this.ownedImpactForcedChunks.clear();
         for (ValueInput chunk : input.childrenListOrEmpty("OwnedImpactForcedChunks")) {
             chunk.getLong("Chunk").ifPresent(this.ownedImpactForcedChunks::add);
@@ -594,6 +608,7 @@ public final class CelestialNailEntity extends Entity {
         output.putBoolean("FluidPurgeActive", this.fluidPurgeActive);
         output.putBoolean("BoundaryActive", this.boundaryActive);
         output.putLong("BoundaryIndex", this.boundaryIndex);
+        output.putBoolean("BoundaryChanged", this.boundaryChanged);
         var forcedChunks = output.childrenList("OwnedImpactForcedChunks");
         for (long chunkKey : this.ownedImpactForcedChunks) forcedChunks.addChild().putLong("Chunk", chunkKey);
     }

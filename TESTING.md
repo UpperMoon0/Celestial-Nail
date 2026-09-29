@@ -26,7 +26,7 @@ This compiles and packages Fabric/Forge 1.20.1, Fabric/NeoForge 1.21.1 and NeoFo
 ./gradlew :neoforge-1.21.1:runGameTestServer
 ```
 
-This launches a disposable GameTest server in `neoforge-1.21.1/run/runtime-tests`. It never connects to the player's server or existing smoke world. Tests live in an isolated `gameTest` source set and are not shipped in the production jar. The dedicated runtime task exits nonzero when required tests fail. Successful evidence must include **all twelve required tests**, not merely a server startup message.
+This launches a disposable GameTest server in `neoforge-1.21.1/run/runtime-tests`. It never connects to the player's server or existing smoke world. Tests live in an isolated `gameTest` source set and are not shipped in the production jar. The dedicated runtime task exits nonzero when required tests fail. Successful evidence must include **all thirteen required tests**, not merely a server startup message.
 
 The suite exercises:
 
@@ -40,6 +40,9 @@ The suite exercises:
 8. Removing existing tripwire beside two unloaded chunks through the production replacement helper does not load either neighbor.
 9. A complete radius-four impact removes unsupported surviving-boundary scaffolding, then waits ten more ticks and asserts no item or falling-block entities.
 10. Boundary reconciliation suppresses queued block survival work, preserves water ticks, and restores ordinary tick scheduling after leaving the scoped operation.
+11. Received entity movement interpolates without snapping or overshoot.
+12. Accelerated descent still collides with a single-block floor.
+13. A complete radius-four impact removes both supports below adjacent boundary scaffolds and settles both unsupported scaffolds without items or falling blocks. The persistence fixture also saves the changed-pass flag and checks conservative loading of older partial passes.
 
 Some fixtures use reflection to enter the entity's private impact/completion stages deterministically; no test-only accessors are added to production code. These exercise actual ServerLevel/entity/block behavior, but they are not command/network end-to-end tests or process-restart tests.
 
@@ -75,6 +78,10 @@ Forge 1.20.1 supplies `pack.mcmeta` (resource format 15) in its own resources di
 
 Client position updates interpolate over two ticks instead of snapping. Descent starts at 2.5 blocks/tick, accelerates by 0.65 to a cap of 18, and swept collision still checks the entire traveled segment. Ground penetration uses an 18-tick ease-out, evaluated at partial ticks for rendering. Removal lasts 54 ticks: subtle separation along real fragment boundaries, staggered fragment release, rigid tumbling around local pivots, accelerating downward movement and dust. Removal still cancels damage and terrain work immediately.
 
-All five builds and 32 shared tests pass. The NeoForge runtime suite now passes twelve required tests, including interpolation without snapping/overshoot and fast descent onto a single-block floor. These checks do not establish live multiplayer smoothness or visual performance on every GPU. The player's running client was left untouched.
+All five builds and 32 shared tests pass. The NeoForge runtime suite now passes thirteen required tests, including interpolation without snapping/overshoot and fast descent onto a single-block floor. These checks do not establish live multiplayer smoothness or visual performance on every GPU. The player's running client was left untouched.
 
 For an offline removal preview, first run `tools/render_nail_shader_job.ps1`, then `python tools/preview_crumble.py` with Java 21, the same Python dependencies and ffmpeg available. It exports the production fracture geometry and rigid transforms to an 82-frame, 30 FPS video at `build/crystal-glint-preview/crumble.mp4`, with a local `crumble.html` player and contact sheet. This studio preview excludes dust, world collision and audio. The contact sheet was inspected and both production shader variants compiled on the GPU.
+
+## Adjacent scaffolding settlement
+
+The complete-impact adjacent-scaffolding regression failed before the correction (`build/adjacent-scaffold-before.log`). Boundary reconciliation now repeats its saved cursor after any successful state replacement and finishes only after an unchanged full pass. Every revisit still consumes the shared scan/change/time allowance, and chunk readiness checks remain in place. The changed-pass flag survives NBT reload; older active saves without it conservatively request another pass. Native deferred block ticks remain suppressed and fluid ticks remain allowed. This covers dependencies within the same immediate boundary layer, not recursive external physics networks. Each pass remains quadratic in radius; total work also depends on the number of passes required to settle.

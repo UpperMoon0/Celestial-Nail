@@ -98,3 +98,5 @@ The pulse now travels as staggered streams through individual crystal facets wit
 The embedded nail bypasses the terrain-section visibility gate for its buried tip, while retaining depth testing, model frustum culling and horizontal fading. Its camera depth range covers the entire body throughout impact and aftermath.
 
 The portal opening audio has its own horizontal falloff: full strength through half its reach, then a smooth fade to a minimum 512-block radius (or twice the configured render distance, if larger). Portal altitude does not attenuate it. This applies to newly summoned nails received by the client; the server's entity-tracking/view-distance limit still controls which clients receive a nail. Ambient volume and the launch/removal fades still apply.
+
+Boundary reconciliation revisits the immediate surviving layer until a full pass makes no changes, so adjacent scaffolds cannot keep each other floating using stale support distances. Revisits resume across ticks and saves under the same shared work allowance; they do not enable unrestricted survival ticks or block drops.

@@ -158,9 +158,12 @@ public final class NailRuntimeGameTests {
     public static void boundaryProgressRoundTripsWithoutRestartingBlast(GameTestHelper h) {
         var level=h.getLevel();var pos=h.absolutePos(new BlockPos(2,2,2));
         var n=nail(level,pos,"save",4);var restored=nail(level,pos,"restore",4);
-        set(n,"boundaryActive",true);set(n,"boundaryIndex",123L);set(n,"purgePass",2);
+        set(n,"boundaryActive",true);set(n,"boundaryChanged",true);set(n,"boundaryIndex",123L);set(n,"purgePass",2);
         CompoundTag tag=save(n);restored.load(tag);CompoundTag after=save(restored);
         h.assertTrue(after.getBoolean("BoundaryActive")&&after.getLong("BoundaryIndex")==123,"Boundary cursor was lost on NBT round trip");
+        h.assertTrue(after.getBoolean("BoundaryChanged"),"Changed pass lost its required revisit on NBT reload");
+        tag.remove("BoundaryChanged");restored.load(tag);
+        h.assertTrue(save(restored).getBoolean("BoundaryChanged"),"Legacy partial passes must be revisited conservatively");
         h.assertTrue(after.getInt("PurgePass")==2,"Completed purge phase was lost on NBT round trip");
         n.discard();restored.discard();h.succeed();
     }
@@ -195,6 +198,36 @@ public final class NailRuntimeGameTests {
             if(finished[0]<0)finished[0]=level.getGameTime();
             h.assertTrue(level.getGameTime()>=finished[0]+10,"Waiting for deferred survival ticks");
             h.assertTrue(level.getBlockState(support).isAir(),"Support inside sphere survived");
+            h.assertTrue(level.getBlockState(scaffold).isAir(),"Unsupported boundary scaffolding survived");
+            h.assertTrue(level.getEntitiesOfClass(ItemEntity.class,new AABB(center).inflate(10)).isEmpty(),"Boundary survival tick created drops");
+            h.assertTrue(level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,new AABB(center).inflate(10)).isEmpty(),"Boundary spawned a falling block");
+            n.discard();
+        });
+    }
+
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_adjacent_scaffolding")
+    public static void fullImpactSettlesAdjacentUnsupportedScaffoldingWithoutDrops(GameTestHelper h) {
+        var level=h.getLevel();var center=h.absolutePos(new BlockPos(7,5,7));
+        var support=center.offset(1,3,0);var scaffold=support.above();
+        var otherSupport=center.offset(2,3,0);var otherScaffold=otherSupport.above();
+        level.setBlock(otherSupport,Blocks.STONE.defaultBlockState(),3);
+        level.setBlock(otherScaffold,Blocks.SCAFFOLDING.defaultBlockState().setValue(net.minecraft.world.level.block.ScaffoldingBlock.DISTANCE,0),3);
+        level.setBlock(support,Blocks.STONE.defaultBlockState(),3);
+        level.setBlock(scaffold,Blocks.SCAFFOLDING.defaultBlockState().setValue(net.minecraft.world.level.block.ScaffoldingBlock.DISTANCE,0),3);
+        var n=nail(level,center,"adjacent_scaffolding_boundary",4);
+        long[] finished={-1};
+        h.runAtTickTime(5,()->{
+            h.assertTrue(level.getBlockState(scaffold).is(Blocks.SCAFFOLDING),"Scaffolding fixture did not settle");
+            h.assertTrue(level.getBlockState(otherScaffold).is(Blocks.SCAFFOLDING),"Adjacent fixture did not settle");
+            h.assertTrue(level.addFreshEntity(n),"Nail not added");n.forceOwnChunk(level);impact(n,level,center);
+        });
+        h.succeedWhen(()->{
+            h.assertTrue(save(n).getBoolean("BlastCleared"),"Blast/boundary pass is not finished");
+            if(finished[0]<0)finished[0]=level.getGameTime();
+            h.assertTrue(level.getGameTime()>=finished[0]+10,"Waiting for deferred survival ticks");
+            h.assertTrue(level.getBlockState(support).isAir(),"Support inside sphere survived");
+            h.assertTrue(level.getBlockState(otherSupport).isAir(),"Adjacent support survived");
+            h.assertTrue(level.getBlockState(otherScaffold).isAir(),"Adjacent unsupported scaffolding survived");
             h.assertTrue(level.getBlockState(scaffold).isAir(),"Unsupported boundary scaffolding survived");
             h.assertTrue(level.getEntitiesOfClass(ItemEntity.class,new AABB(center).inflate(10)).isEmpty(),"Boundary survival tick created drops");
             h.assertTrue(level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,new AABB(center).inflate(10)).isEmpty(),"Boundary spawned a falling block");
