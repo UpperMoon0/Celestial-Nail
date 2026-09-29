@@ -1,7 +1,7 @@
 package com.nstut.celestialnail.gametest;
 
 import com.nstut.celestialnail.entity.CelestialNailEntity;
-import com.nstut.celestialnail.entity.NailWorldOperations;
+import com.nstut.explosion.terrain.TerrainOperations;
 import com.nstut.celestialnail.neoforge.CelestialNailNeoForge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -82,7 +82,7 @@ public final class NailRuntimeGameTests {
             BlockPos pos=origin.offset(i*3,0,0);level.setBlock(pos,states[i],3);
             h.assertTrue(level.getBlockEntity(pos) instanceof Container,"Fixture container missing");
             ((Container)level.getBlockEntity(pos)).setItem(0,new ItemStack(Items.DIAMOND,64));
-            h.assertTrue(NailWorldOperations.replaceWithoutDrops(level,pos,Blocks.AIR.defaultBlockState()),"Removal failed");
+            h.assertTrue(TerrainOperations.replaceWithoutDrops(level,pos,Blocks.AIR.defaultBlockState()),"Removal failed");
             h.assertTrue(level.getBlockEntity(pos)==null,"Block entity was not removed");
         }
         h.runAtTickTime(2,()->{
@@ -97,7 +97,7 @@ public final class NailRuntimeGameTests {
         h.assertFalse(level.isLoaded(pos),"Fixture chunk must start unloaded");
         h.assertFalse(level.getForcedChunks().contains(chunk.toLong()),"Fixture chunk must not be pre-forced");
         try {
-            h.assertTrue(NailWorldOperations.forceChunk(level,chunk),"Request was not recorded");
+            h.assertTrue(TerrainOperations.forceChunk(level,chunk),"Request was not recorded");
             h.assertTrue(level.getForcedChunks().contains(chunk.toLong()),"Request is absent from persistent forced set");
             h.assertFalse(level.isLoaded(pos),"Request synchronously loaded the cold chunk");
         } finally {level.setChunkForced(chunk.x,chunk.z,false);}
@@ -126,7 +126,7 @@ public final class NailRuntimeGameTests {
             }
             h.assertTrue(shared!=null,"No unowned temporary overlap available for fixture");
             long key=shared.toLong();
-            acquired=NailWorldOperations.forceChunk(level,shared);
+            acquired=TerrainOperations.forceChunk(level,shared);
             h.assertTrue(acquired,"Fixture did not acquire its temporary chunk");
             set(a,"ownedImpactForcedChunks",new java.util.HashSet<>(Set.of(key)));
             finish(a,level);
@@ -176,7 +176,7 @@ public final class NailRuntimeGameTests {
         chunk.getSection(chunk.getSectionIndex(pos.getY())).setBlockState(0,pos.getY()&15,15,Blocks.TRIPWIRE.defaultBlockState());
         h.assertFalse(level.isLoaded(pos.west()),"West neighbor must start cold");
         h.assertFalse(level.isLoaded(pos.south()),"South neighbor must start cold");
-        h.assertTrue(NailWorldOperations.replaceWithoutDrops(level,pos,Blocks.AIR.defaultBlockState()),"Wire removal failed");
+        h.assertTrue(TerrainOperations.replaceWithoutDrops(level,pos,Blocks.AIR.defaultBlockState()),"Wire removal failed");
         h.assertFalse(level.isLoaded(pos.west()),"Removal callback loaded west neighbor");
         h.assertFalse(level.isLoaded(pos.south()),"Removal callback loaded south neighbor");
         h.succeed();
@@ -379,21 +379,21 @@ public final class NailRuntimeGameTests {
                 var state=live.defaultBlockState();
                 if(state.hasProperty(BlockStateProperties.WATERLOGGED))state=state.setValue(BlockStateProperties.WATERLOGGED,false);
                 if(state.hasProperty(BlockStateProperties.HORIZONTAL_FACING))state=state.setValue(BlockStateProperties.HORIZONTAL_FACING,net.minecraft.core.Direction.EAST);
-                NailWorldOperations.replaceWithoutDrops(level,pos,state);
-                var next=NailWorldOperations.reconcileBoundary(level,pos,state);
+                TerrainOperations.replaceWithoutDrops(level,pos,state);
+                var next=TerrainOperations.reconcileBoundary(level,pos,state);
                 h.assertTrue(next.is(dead),"Dry coral variant not converted: "+color+suffix);
                 if(state.hasProperty(BlockStateProperties.HORIZONTAL_FACING))
                     h.assertTrue(next.getValue(BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.EAST,"Wall fan orientation lost");
                 level.setBlock(pos.above(),Blocks.WATER.defaultBlockState(),2);
-                h.assertTrue(NailWorldOperations.reconcileBoundary(level,pos,state)==state,"Externally hydrated coral converted");
+                h.assertTrue(TerrainOperations.reconcileBoundary(level,pos,state)==state,"Externally hydrated coral converted");
                 level.setBlock(pos.above(),Blocks.AIR.defaultBlockState(),2);
                 if(state.hasProperty(BlockStateProperties.WATERLOGGED)) {
                     var wet=state.setValue(BlockStateProperties.WATERLOGGED,true);
-                    NailWorldOperations.replaceWithoutDrops(level,pos,wet);
-                    h.assertTrue(NailWorldOperations.reconcileBoundary(level,pos,wet)==wet,"Waterlogged coral converted");
+                    TerrainOperations.replaceWithoutDrops(level,pos,wet);
+                    h.assertTrue(TerrainOperations.reconcileBoundary(level,pos,wet)==wet,"Waterlogged coral converted");
                 }
             }
-        NailWorldOperations.replaceWithoutDrops(level,pos,Blocks.AIR.defaultBlockState());
+        TerrainOperations.replaceWithoutDrops(level,pos,Blocks.AIR.defaultBlockState());
         h.succeed();
     }
 
@@ -407,18 +407,18 @@ public final class NailRuntimeGameTests {
         level.setBlock(pos,scaffold,3);
         var bounds=new net.minecraft.world.level.levelgen.structure.BoundingBox(pos.getX(),pos.getY(),pos.getZ(),pos.getX(),pos.getY(),pos.getZ());
         level.getBlockTicks().clearArea(bounds);level.getFluidTicks().clearArea(bounds);
-        var next=NailWorldOperations.reconcileBoundary(level,pos,scaffold);
+        var next=TerrainOperations.reconcileBoundary(level,pos,scaffold);
         h.assertTrue(next.is(Blocks.SCAFFOLDING),"Supported scaffolding was removed");
         h.assertFalse(level.getBlockTicks().hasScheduledTick(pos,Blocks.SCAFFOLDING),"Boundary queued destructive block work");
         h.assertTrue(level.getFluidTicks().hasScheduledTick(pos,net.minecraft.world.level.material.Fluids.WATER),"Boundary suppressed permitted water flow");
         // Exercise the generic scheduled-survival path, not only the scaffolding special case.
         var sandPos=pos.offset(3,0,0);level.setBlock(sandPos.below(),Blocks.STONE.defaultBlockState(),3);
-        var sand=Blocks.SAND.defaultBlockState();NailWorldOperations.replaceWithoutDrops(level,sandPos,sand);
-        NailWorldOperations.reconcileBoundary(level,sandPos,sand);
+        var sand=Blocks.SAND.defaultBlockState();TerrainOperations.replaceWithoutDrops(level,sandPos,sand);
+        TerrainOperations.reconcileBoundary(level,sandPos,sand);
         h.assertFalse(level.getBlockTicks().hasScheduledTick(sandPos,Blocks.SAND),"Shape check leaked a sand survival tick");
         level.scheduleTick(pos,Blocks.SCAFFOLDING,1);
         h.assertTrue(level.getBlockTicks().hasScheduledTick(pos,Blocks.SCAFFOLDING),"Scoped suppression leaked into ordinary world ticks");
-        h.assertFalse(com.nstut.celestialnail.NailMutationScope.active(),"Mutation scope leaked");
+        h.assertFalse(com.nstut.explosion.terrain.TerrainMutationScope.active(),"Mutation scope leaked");
         h.succeed();
     }
 

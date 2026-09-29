@@ -1,6 +1,6 @@
 modLoader = "javafml"
 loaderVersion = "[4,)"
-license = "All Rights Reserved"
+license = "MIT"
 
 [[mods]]
 modId = "celestial_nail"
@@ -26,5 +26,10 @@ side = "BOTH"
 [[mixins]]
 config="celestial_nail.client.mixins.json"
 
-[[mixins]]
-config="celestial_nail.server.mixins.json"
+
+[[dependencies.celestial_nail]]
+modId = "perfomant_boom"
+type = "required"
+versionRange = "[1.1.0,2.0.0)"
+ordering = "AFTER"
+side = "BOTH"

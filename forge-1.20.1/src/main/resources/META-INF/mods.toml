@@ -1,6 +1,6 @@
 modLoader = "javafml"
 loaderVersion = "[47,)"
-license = "All Rights Reserved"
+license = "MIT"
 
 [[mods]]
 modId = "celestial_nail"
@@ -27,5 +27,12 @@ side = "BOTH"
 modId = "architectury"
 mandatory = true
 versionRange = "[9.2.14,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.celestial_nail]]
+modId = "perfomant_boom"
+mandatory = true
+versionRange = "[1.1.0,2.0.0)"
 ordering = "AFTER"
 side = "BOTH"

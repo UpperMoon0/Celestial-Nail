@@ -126,3 +126,10 @@ tasks.register('buildAll') {
         ':neoforge-26.1.2:build'
     )
 }
+
+// Include the redistribution license in every published JAR.
+allprojects {
+    tasks.withType(Jar).configureEach {
+        from(rootProject.file("LICENSE")) { rename { "LICENSE_${rootProject.name}" } }
+    }
+}

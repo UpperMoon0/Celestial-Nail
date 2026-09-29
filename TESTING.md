@@ -8,7 +8,7 @@ Run Gradle with Java 21. The 26.1.2 module resolves Java 25 for compilation.
 ./gradlew :common:test
 ```
 
-The 32 tests include existing animation/mesh/shell/fluid checks and eight new work-budget/boundary checks. New coverage verifies shared per-level ownership of an allowance, change and scan caps, chunk-request caps, elapsed-time cutoffs, per-tick reset, a six-neighbor brute-force boundary oracle, duplicate rejection, saved-cursor reconstruction, and quadratic traversal at maximum power.
+The current Nail suite contains 20 tests for Nail-owned animation, geometry and math. Reusable sphere/fluid/boundary cursor and work-budget tests moved to Perfomant Boom's `core` suite with the API extraction. Run Boom's checks as well when changing that dependency; the historical regression notes below describe the behavior introduced before extraction, not terrain helpers still owned by Nail.
 
 A budget is cooperative: it limits when the next operation starts. It does not claim to preempt a slow third-party callback or measure end-to-end server/client performance. Current allocation is shared, not a round-robin fairness scheduler.
 
@@ -107,3 +107,11 @@ Before the correction, the natural-leaf, adjacent-leaf and persistent-distance f
 Unsupported brushable blocks use the same bounded no-drop replacement as ordinary falling blocks, including the existing version-specific block-entity cleanup. Supported brushable blocks remain intact. The adapter resolves hydration for all twenty vanilla live coral blocks, plants, floor fans and wall fans; dry coral becomes its corresponding dead state with shared properties preserved. Waterlogged coral and coral with adjacent water stay alive. This explicit vanilla mapping does not claim support for custom modded coral death variants.
 
 The full-impact suspicious-sand, suspicious-gravel and dry-coral regressions failed before the fix, while the prior seventeen tests and three preservation controls passed (`build/brushable-coral-before.log`). The corrected suite and all-target build output are in `build/brushable-coral-after.log`. Runtime evidence remains NeoForge 1.21.1; 1.20.1 and 26.1.2 have source/build verification. No unrestricted native gravity or coral death callbacks are enabled.
+
+## Shared terrain dependency
+
+Publish the matching Perfomant Boom 1.1.0 artifacts to Maven local before these checks.
+All terrain mutation tests now exercise Boom's external API and mixins. The three passes
+and cursors no longer live in Nail; the entity keeps its existing persisted cursor fields.
+When iterating on Boom at the same version, refresh Nail's dependency cache with
+`--refresh-dependencies` before validating it again.

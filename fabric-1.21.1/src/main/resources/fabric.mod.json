@@ -7,7 +7,7 @@
   "authors": [
     "NsTut"
   ],
-  "license": "All-Rights-Reserved",
+  "license": "MIT",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -18,14 +18,14 @@
     ]
   },
   "depends": {
-    "fabricloader": ">=0.17.2",
+    "fabricloader": ">=0.18.4",
     "fabric-api": "*",
     "minecraft": "=1.21.1",
     "java": ">=21",
-    "architectury": ">=13.0.8"
+    "architectury": ">=13.0.8",
+    "perfomant_boom": ">=1.1.0 <2.0.0"
   },
   "mixins": [
-    "celestial_nail.client.mixins.json",
-    "celestial_nail.server.mixins.json"
+    "celestial_nail.client.mixins.json"
   ]
 }

@@ -16,3 +16,5 @@ jar {
 }
 
 loom { mixin { defaultRefmapName = "celestial_nail.refmap.json" } }
+
+dependencies { modCompileOnly "com.nstut:perfomant_boom-common:${rootProject.boom_version}" }

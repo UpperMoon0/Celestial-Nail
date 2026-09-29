@@ -1,13 +1,13 @@
 package com.nstut.celestialnail.entity;
 
+import com.nstut.explosion.terrain.TerrainOperations;
 import com.nstut.celestialnail.CelestialNailMath;
 import com.nstut.celestialnail.CelestialNailVisuals;
-import com.nstut.celestialnail.FluidPurgeCursor;
-import com.nstut.celestialnail.ImpactWorkBudget;
-import com.nstut.celestialnail.SphereBoundaryCursor;
+import com.nstut.explosion.terrain.TerrainPasses;
+import com.nstut.explosion.terrain.SphereShellCursor;
+import com.nstut.explosion.terrain.ImpactWorkBudget;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -27,7 +27,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -304,25 +303,10 @@ public final class CelestialNailEntity extends Entity {
         if (this.boundaryActive) { tickBoundary(level); return; }
         if (this.fluidPurgeActive) { tickFluidPurge(level); return; }
         int targetRadius = CelestialNailMath.targetRadius(this.power());
-        ImpactWorkBudget budget = ImpactWorkBudget.forTick(level, level.getGameTime());
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        while (this.shellRadius <= targetRadius && !isRemoved() && !isCrumbling() && budget.tryScan()) {
-            int dx = this.scanX;
-            int dy = this.scanY;
-            int dz = this.scanZ;
-            cursor.set(this.impactCenter.getX() + dx, this.impactCenter.getY() + dy, this.impactCenter.getZ() + dz);
-            if (!level.isOutsideBuildHeight(cursor)) {
-                if (!ensureImpactChunkReady(level, cursor)) {
-                    this.entityData.set(DATA_WAVE_RADIUS, displayedWaveRadius());
-                    return;
-                }
-                var state = level.getBlockState(cursor);
-                // UPDATE_KNOWN_SHAPE prevents neighbor shape updates from scheduling new fluid
-                // cascades behind an inside-out wave. No drops, including waterlogged containers.
-                if (!state.isAir() && NailWorldOperations.replaceWithoutDrops(level, cursor, Blocks.AIR.defaultBlockState())) budget.changed();
-            }
-            advanceScan();
-        }
+        var scan = new SphereShellCursor(shellRadius, scanX, scanY, scanZ);
+        TerrainPasses.clearSphere(level, impactCenter, targetRadius, scan,
+                pos -> ensureImpactChunkReady(level, pos), () -> isRemoved() || isCrumbling());
+        copyScan(scan);
         this.entityData.set(DATA_WAVE_RADIUS, displayedWaveRadius());
         if (this.shellRadius > targetRadius) {
             this.fluidPurgeActive = true;
@@ -334,24 +318,10 @@ public final class CelestialNailEntity extends Entity {
 
     private void tickFluidPurge(ServerLevel level) {
         if (this.purgeWait > 0) { this.purgeWait--; return; }
-        FluidPurgeCursor scan = new FluidPurgeCursor(CelestialNailMath.targetRadius(power()), this.purgeIndex);
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        ImpactWorkBudget budget = ImpactWorkBudget.forTick(level, level.getGameTime());
-        while (!scan.done() && !isRemoved() && !isCrumbling() && budget.tryScan()) {
-            pos.set(impactCenter.getX()+scan.x(), impactCenter.getY()+scan.y(), impactCenter.getZ()+scan.z());
-            if (scan.inside() && !level.isOutsideBuildHeight(pos)) {
-                if (!ensureImpactChunkReady(level, pos)) { this.purgeIndex=scan.index(); return; }
-                var state=level.getBlockState(pos);
-                if (!state.getFluidState().isEmpty()) {
-                    var dry=state.hasProperty(BlockStateProperties.WATERLOGGED)
-                            ? state.setValue(BlockStateProperties.WATERLOGGED, false) : Blocks.AIR.defaultBlockState();
-                    if (NailWorldOperations.replaceWithoutDrops(level, pos, dry)) budget.changed();
-                }
-            }
-            scan.advance();
-        }
-        this.purgeIndex=scan.index();
-        if (!scan.done()) return;
+        var progress = TerrainPasses.purgeFluids(level, impactCenter, CelestialNailMath.targetRadius(power()),
+                purgeIndex, pos -> ensureImpactChunkReady(level, pos), () -> isRemoved() || isCrumbling());
+        this.purgeIndex = progress.nextIndex();
+        if (!progress.done()) return;
         if (this.purgePass++ == 0) {
             // Let already queued water/lava ticks settle, then remove residual flowing states
             // in gravity order. This is bounded; surviving water outside the blast is untouched.
@@ -366,27 +336,11 @@ public final class CelestialNailEntity extends Entity {
     }
 
     private void tickBoundary(ServerLevel level) {
-        SphereBoundaryCursor scan = new SphereBoundaryCursor(CelestialNailMath.targetRadius(power()), boundaryIndex);
-        ImpactWorkBudget budget = ImpactWorkBudget.forTick(level, level.getGameTime());
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        while (!scan.done() && !isRemoved() && !isCrumbling() && budget.tryScan()) {
-            pos.set(impactCenter.getX() + scan.x(), impactCenter.getY() + scan.y(), impactCenter.getZ() + scan.z());
-            if (scan.valid() && !level.isOutsideBuildHeight(pos)) {
-                if (!ensureBoundaryReady(level, pos)) { boundaryIndex = scan.index(); return; }
-                var state = level.getBlockState(pos);
-                if (!state.isAir()) {
-                    // Reconcile one surviving boundary layer. Do not unleash recursive neighbor cascades.
-                    var next = NailWorldOperations.reconcileBoundary(level, pos, state);
-                    if (next != state && NailWorldOperations.replaceWithoutDrops(level, pos, next)) {
-                        budget.changed();
-                        boundaryChanged = true;
-                    }
-                }
-            }
-            scan.advance();
-        }
-        boundaryIndex = scan.index();
-        if (scan.done() && !isRemoved() && !isCrumbling()) {
+        var progress = TerrainPasses.reconcileBoundary(level, impactCenter, CelestialNailMath.targetRadius(power()),
+                boundaryIndex, pos -> ensureBoundaryReady(level, pos), () -> isRemoved() || isCrumbling());
+        boundaryIndex = progress.nextIndex();
+        boundaryChanged |= progress.changed();
+        if (progress.done() && !isRemoved() && !isCrumbling()) {
             // Neighbor support distances may have been stale earlier in this pass. Revisit
             // the same layer next tick until a complete pass is unchanged. Each visit still
             // consumes the shared scan/change/time budget; never enable native survival ticks.
@@ -421,49 +375,14 @@ public final class CelestialNailEntity extends Entity {
     }
 
     private void resetScanForShell() {
-        int r = this.shellRadius;
-        this.scanX = -r;
-        this.scanY = -r - 1;
-        moveToNextColumn();
+        copyScan(SphereShellCursor.start(shellRadius));
     }
 
-    private void advanceScan() {
-        int r = this.shellRadius;
-        int outer = CelestialNailMath.outerZExtent(this.scanX, this.scanY, r);
-        int inner = CelestialNailMath.innerZExtent(this.scanX, this.scanY, r);
-        if (inner >= 0 && this.scanZ == -inner - 1) {
-            this.scanZ = inner + 1;
-            return;
-        }
-        if (this.scanZ < outer) {
-            this.scanZ++;
-            return;
-        }
-        moveToNextColumn();
+    private void copyScan(SphereShellCursor scan) {
+        shellRadius = scan.radius();
+        scanX = scan.x(); scanY = scan.y(); scanZ = scan.z();
     }
 
-    private void moveToNextColumn() {
-        while (true) {
-            int r = this.shellRadius;
-            if (++this.scanY > r) {
-                this.scanY = -r;
-                this.scanX++;
-            }
-            if (this.scanX > r) {
-                this.shellRadius++;
-                r = this.shellRadius;
-                this.scanX = -r;
-                this.scanY = -r - 1;
-                continue;
-            }
-            int outer = CelestialNailMath.outerZExtent(this.scanX, this.scanY, r);
-            int inner = CelestialNailMath.innerZExtent(this.scanX, this.scanY, r);
-            if (outer > inner) {
-                this.scanZ = -outer;
-                return;
-            }
-        }
-    }
     private boolean ensureImpactChunkReady(ServerLevel level, BlockPos pos) {
         if (level.isLoaded(pos)) return true;
         int chunkX = Math.floorDiv(pos.getX(), 16);
@@ -471,7 +390,7 @@ public final class CelestialNailEntity extends Entity {
         long chunkKey = CelestialNailMath.packChunk(chunkX, chunkZ);
         if (level.getForcedChunks().contains(chunkKey)) return false;
         if (!ImpactWorkBudget.forTick(level, level.getGameTime()).tryRequestChunk()) return false;
-        if (NailWorldOperations.forceChunk(level, new net.minecraft.world.level.ChunkPos(chunkX, chunkZ))) this.ownedImpactForcedChunks.add(chunkKey);
+        if (TerrainOperations.forceChunk(level, new net.minecraft.world.level.ChunkPos(chunkX, chunkZ))) this.ownedImpactForcedChunks.add(chunkKey);
         return false;
     }
 
@@ -514,7 +433,7 @@ public final class CelestialNailEntity extends Entity {
         if (isRemoved()) return;
         var chunk = this.chunkPosition();
         if (!level.getForcedChunks().contains(chunk.toLong())) {
-            this.ownsForcedChunk = NailWorldOperations.forceChunk(level, chunk);
+            this.ownsForcedChunk = TerrainOperations.forceChunk(level, chunk);
         }
     }
 
