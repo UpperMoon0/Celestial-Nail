@@ -1,143 +1,79 @@
 # Celestial Nail
 
-Celestial Nail is a multi-version Minecraft mod that adds an administrator-controlled divine strike inspired by Genshin Impact's Celestial Nails.
+Summon a towering celestial monument through a glowing sky rift, launch it into the ground, and leave a vast crater with an embedded landmark. Inspired by Genshin Impact's Celestial Nails, this Minecraft mod is built for administrator-controlled events, creative worlds and server scenarios.
 
-## Documentation
+## Features
 
-- [CurseForge description](CURSEFORGE.md): ready-to-paste player overview and command quick start.
-- [Compatibility and installation](docs/COMPATIBILITY.md): dependencies, multiplayer setup and troubleshooting.
-- [Contributing](CONTRIBUTING.md) and [architecture](docs/ARCHITECTURE.md): development setup and the Nail/Boom ownership boundary.
-- [Testing](TESTING.md), [releasing](RELEASING.md) and [changelog](CHANGELOG.md).
+- **A persistent monument:** a 72-block-tall Nail at default scale, with a tip-first emergence animation and a floating sky portal.
+- **Independent size and power:** choose the visual scale separately from the crater radius.
+- **A staged strike:** downward acceleration, an expanding destruction wave, entity damage and deep embedding.
+- **Cinematic effects:** flashes, a light column, procedural shockwave, dust, fragments, sound and camera effects.
+- **Saved progress:** Nails and their strike stages persist across world saves; completed impacts do not restart on reload.
+- **Controlled removal:** an administrator can cancel further damage and clearing, followed by a harmless crumble animation.
 
-The project-page icon is [icon.png](icon.png) at the repository root. The CurseForge description and icon are local publishing assets; they do not update the website automatically.
+Terrain work is spread across server ticks through the required Perfomant Boom library. Large strikes still perform substantial work; completion time depends on terrain, chunk readiness and server load.
 
-## Supported targets
+## Installation
 
-| Minecraft | Loader | Java |
-| --- | --- | ---: |
-| 1.20.1 | Fabric | 17 |
-| 1.20.1 | Forge | 17 |
-| 1.21.1 | Fabric | 21 |
-| 1.21.1 | NeoForge | 21 |
-| 26.1.2 | NeoForge | 25 |
+Install Nail and **Perfomant Boom 1.1.0** for the same Minecraft version and loader on the server and every participating client. In single-player, install both in your client instance. Boom is a separate dependency, not bundled inside Nail.
 
-The workspace follows the maintained NsTut multi-version split: loader-neutral code in `common`, version-specific entity/command/render code in `common-1.20.1`, `common-1.21.1`, and `common-26.1.2`, plus loader entrypoints for each target.
+| Minecraft | Loader | Additional required mods | Java |
+| --- | --- | --- | --- |
+| 1.20.1 | Fabric | Fabric API, Architectury API 9.2.14+ | 17 |
+| 1.20.1 | Forge | Architectury API 9.2.14+ | 17 |
+| 1.21.1 | Fabric | Fabric API, Architectury API 13.0.8+ | 21 |
+| 1.21.1 | NeoForge | None beyond Boom | 21 |
+| 26.1.2 | NeoForge | None beyond Boom | 25 |
 
-## Commands
+Fabric Loader must be **0.18.4+**. The NeoForge 1.21.1 artifact requires NeoForge **21.1.228 or newer within 21.1.x** and Minecraft **1.21.1**. Choose runnable JARs, excluding sources/dev JARs, and remove obsolete duplicates when updating. The supported-target matrix does not imply that every artifact is already published.
 
-All commands require game-master/operator permission. In single-player, enabling cheats grants the required permission.
+Nail currently develops and tests against Boom 1.1.0; metadata accepts `>=1.1.0 <2.0.0`. That range does not certify untested future versions. See [compatibility](docs/COMPATIBILITY.md) for full setup and conflict notes.
 
-```text
-/celestialnail summon <id> <x> <y> <z> [power] [scale]
-/celestialnail launch <id>
-/celestialnail remove <id>
+## Quick start
+
+Use a disposable world with cheats enabled, or an account with game-master/operator permission.
+
+```mcfunction
+/celestialnail summon sky_nail ~ ~80 ~ 32 1
+```
+
+This places the floating tip 80 blocks above the command source, with crater radius 32 and visual scale 1. Wait for emergence to finish (about 8.5 seconds), then launch:
+
+```mcfunction
+/celestialnail launch sky_nail
+```
+
+List existing IDs or remove a Nail:
+
+```mcfunction
 /celestialnail list
+/celestialnail remove sky_nail
 ```
 
-`id` must be unique across every loaded dimension. `power` is the crater radius in blocks, accepts `4` through `128`, and defaults to `32`. The summon position is the Nail's final floating tip and the vertical line it will strike. `scale` defaults to `1` (72 blocks tall), accepts `0.1` through `4`, and scales the entire nail and portal uniformly. It does not change explosion power.
+`power` accepts **4–128**, default **32**. `scale` accepts **0.1–4**, default **1**. Scale changes appearance, not crater radius. Use a unique ID for each Nail. Read [USAGE.md](USAGE.md) for full syntax, timing, cancellation and troubleshooting.
 
-For example, `/celestialnail summon sky_nail ~ ~80 ~ 32 1` creates a 72-block nail with a 32-block impact radius. Use `32 0.5` for 36 blocks tall or `32 2` for 144 blocks tall.
+## World changes and limits
 
-On summon, a luminous four-point rift opens over 1.5 seconds. The nail emerges tip-first through it over the next 7 seconds, with geometry above the aperture hidden. The nail continues down until its tip reaches the command coordinates, leaving a gap of half its height between crown and portal (36 blocks at scale 1). The portal stays open at that higher anchor while the nail floats. Previously saved floating nails receive the larger gap on reload. Launch is available once emergence finishes; it collapses the portal and fades its sound over 1.5 seconds, then begins descent. The animation clock, scale and portal anchor are synchronized and saved, so reconnecting clients and reloaded worlds retain the sequence. The opening sound plays once to nearby clients rather than restarting when an old nail is encountered.
+This is an administrative world-edit tool. Impacts intentionally bypass `mobGriefing` and protection that only intercepts ordinary explosions or player block breaking, including those FTB Chunks claim filters. Back up worlds and restrict command access accordingly.
 
-The supplied audio source is preserved at `assets/audio/portal-source.mp3`; the game streams a 10-second mono Ogg Vorbis opening excerpt with a two-second fade-out from `common/src/main/resources/assets/celestial_nail/sounds/portal_open.ogg`. Regenerate it with `tools/prepare_portal_audio.ps1` (FFmpeg required).
+Cleared blocks and vanilla container contents do not drop items. Living entities can take damage during the strike. Removal stops further damage and terrain work immediately but **does not restore existing damage or terrain**. External fluid sources remain intact and can flow back after cleanup.
 
-`/celestialnail remove <id>` starts a 2.7-second harmless removal: stone sections subtly separate along real fragment boundaries before releasing into thick tumbling fragments and dust, then the entity disappears. This works while emerging, floating, descending, impacting or embedded. Removal cancels all further damage and terrain clearing immediately; the visual debris never places or breaks blocks. Repeating the command does not restart the animation.
+Nails retain their own chunk access; temporary impact chunks are managed separately. Existing forced chunks are preserved. Work limits are cooperative, not a promise of lag-free operation. Arbitrary modded callbacks and recursive physics behavior are not guaranteed.
 
-A summoned Nail is a real persistent, networked entity. It floats in place, displays its ID, and force-loads only its own chunk so it remains addressable after players leave or the server restarts. `/celestialnail launch <id>` accelerates it straight down until its tip intersects terrain.
+## Automation and development
 
-## Impact behavior
+Use [INTEGRATION.md](INTEGRATION.md) for command blocks, datapack functions and the boundary between command automation and Java internals. Nail does not currently document a stable public Java integration API.
 
-On impact, the Nail starts an inside-out spherical destruction wave. During the active blast, nearby living entities take damage every ten ticks; the traveling shock front also damages living entities it reaches outside the crater. Normal damage immunity frames are respected. Damage stops when the blast and wave finish, or immediately when an administrator removes the nail. The nail pierces downward over 18 ticks, with most penetration in the initial impact, until its tip is embedded below the crater floor, then remains permanently. Its embedded phase, exact impact height and blast-completion state are saved, so loading the world does not restart the explosion. Terrain is removed in bounded per-tick batches instead of executing one giant vanilla explosion. All impacts in a dimension share a limit of 3,000 block changes, 45,000 scan steps and one new impact-chunk request per tick, plus an eight-millisecond cooperative work window. The window stops before the next operation; it cannot preempt an individual vanilla or mod callback and is not a guaranteed server tick time. Cold impact chunks are requested without synchronously loading them. Blocks and vanilla container inventories do not drop items; custom block callbacks may define additional behavior.
+For source builds, run Gradle on Java 21 with Java 17/21/25 target toolchains. First publish the Boom revision matching Nail's `boom_version` to Maven local, then run `./gradlew buildAll` in Nail (`gradlew.bat` on Windows). [CONTRIBUTING.md](CONTRIBUTING.md) explains dependency setup and development runs.
 
-The wave clears fluid-bearing blocks as well as solids, suppresses neighbor-shape update cascades during removal, and finishes with two bounded top-down fluid sweeps separated by a settling period. Source water, flowing water, lava and waterlogged states are cleared inside the sphere, including both valid build-height boundaries. A final bounded pass reconciles the shapes and survival of the one-block six-neighbor boundary. Unsupported attachments in that layer can disappear without drops; fluid ticks scheduled by boundary states are allowed to run naturally. This is not a general recursive redstone/physics settlement pass. Sources outside the blast remain intact and can subsequently flow naturally; the mod does not install permanent invisible fluid barriers.
+## Documentation and support
 
-The destruction path intentionally uses server-authorized direct block mutation rather than a vanilla explosion or player break action. Therefore it intentionally ignores `mobGriefing` and protection filters that only cancel normal explosion/player-grief events, including FTB Chunks claim explosion/break protection. Treat the command as an administrative world-edit operation.
+- [Usage](USAGE.md) and [integration](INTEGRATION.md)
+- [Compatibility and troubleshooting](docs/COMPATIBILITY.md)
+- [Detailed behavior and visual reference](docs/REFERENCE.md)
+- [Architecture](docs/ARCHITECTURE.md), [contributing](CONTRIBUTING.md) and [testing](TESTING.md)
+- [Releasing](RELEASING.md), [changelog](CHANGELOG.md) and [CurseForge description source](CURSEFORGE.md)
 
-Deep embedding is exempt from vanilla below-world entity disposal, and removed entities cannot reacquire tickets. Visual-sized bounds do not participate in fluid-volume scans. Boundary progress is saved; completed impacts cannot accept temporary impact-ticket ownership.
+Report issues with game/loader versions, Nail and Boom versions, the command used, reproduction steps and logs through [GitHub Issues](https://github.com/UpperMoon0/Celestial-Nail/issues). Build coverage spans all five targets; complete-impact runtime tests focus on NeoForge 1.21.1 and do not certify every target's visuals or performance.
 
-If a Nail occupies a chunk that was already force-loaded by an administrator or another system, removing the Nail will not un-force that pre-existing chunk. When multiple Nails share one chunk, force-load ownership is transferred until the last owning Nail is removed.
-
-## Cataclysm atmosphere and visibility
-
-Arrival adds a cold screen tint, rising dust, a distant sky crack and a low drone. The floating nail carries slow suspended fragments, a fine shader pulse along its crystal inlays and occasional crystal creaks. Launch keeps the fragments orbiting, sends the pulse down toward the tip, swells the charge sound and leaves a short silence before descent.
-
-Impact produces a brief blue-white flash, a vertical light column and a soft procedural shock front with dust. The pulse and shockwave use procedural fragment shading rather than textured ring meshes. The local boom and restrained camera shake arrive with the wave (12 blocks per tick after an eight-tick delay). Smoke, falling fragments, drifting ash, blue particle seams on the crater bowl and intermittent aftershocks fade over one minute. These are client effects; they do not create falling-block entities or add chunk tickets. Particle spawning is capped at 48 per client tick across all nails. Effects honor horizontal visibility and audio category volume; other game sounds are attenuated during the sequence. The original portal excerpt is retained, with six compact original procedural sound layers generated by `tools/generate_cataclysm_audio.py`.
-
-Nail and portal visibility uses horizontal distance, so altitude does not consume the render-distance budget. Their shader bypasses vanilla vertical fog and applies a smooth fade over the final two horizontal chunks. The camera far plane expands only for a tracked, horizontally visible nail or impact column; terrain fog and chunk loading remain unchanged. Both projection and frustum clipping use the expanded distance. The impact timestamp is saved and synchronized; existing impacts without a timestamp do not replay a cinematic on upgrade.
-
-## Build
-
-Run Gradle itself on Java 21; the 26.1.2 module selects a Java 25 toolchain for compilation.
-
-```bash
-./gradlew buildAll
-```
-
-Individual lanes:
-
-```bash
-./gradlew :fabric-1.20.1:build
-./gradlew :forge-1.20.1:build
-./gradlew :fabric-1.21.1:build
-./gradlew :neoforge-1.21.1:build
-./gradlew :neoforge-26.1.2:build
-```
-
-Root convenience tasks also provide client/server runs for every supported target.
-
-## Verification
-
-See [TESTING.md](TESTING.md) for shared tests, isolated GameTests, their coverage and the remaining cross-version/live-client validation limits. The baseline source audit is recorded in [docs/runtime-audit.md](docs/runtime-audit.md).
-
-## Model review renders
-
-Run `tools/render_nail_job.ps1` to compile and export the actual shared entity mesh, then render the game atlas from front, back, left, right, top and bottom with close-ups. The output is `docs/celestial-nail-model-preview.png`. This is an offline mesh/material review, not an in-game capture; the portal, shader effects and world lighting are excluded. `docs/celestial-nail-model-before.png` preserves the previous design for comparison.
-
-The refined model uses a wider crown, lower asymmetric rear petals, beveled stone-and-gold tracery, elongated glass lancets, irregular stone cap fragments, staggered casing fractures and illuminated cube debris. Its flat facets and nearest-neighbor pixel atlas preserve the Minecraft style. Hidden internal molding caps are omitted to keep the body and crystal debris below the existing 10,000-quad budget.
-
-
-Crystal highlights are procedural: blue internal light, a camera-dependent sheen and sparse four-point stars animate on the crystal faces. The former short fixed glint strips are removed; thin facet edges remain part of the model. The shader preserves the pixel atlas, distance fade and crumble fade. Animation time travels with each nail's vertices, so several nails with different ages can share a render batch safely. This is stylized emissive shading, not screen-space bloom, refraction or illumination of nearby blocks.
-
-For an animated GPU review, install Python packages `numpy Pillow moderngl glcontext`, export the mesh with `tools/render_nail_job.ps1`, then run `python tools/preview_crystal_shader.py`. It compiles both shader versions and renders the actual mesh/fragment shader into `build/crystal-glint-preview/`, checking animation, camera response and the clock loop. The preview substitutes Minecraft's matrix imports with equivalent uniforms; it is not an in-game capture.
-
-
-The pulse now travels as staggered streams through individual crystal facets with a soft blue afterglow, rather than a continuous bright band. Run `tools/render_nail_shader_job.ps1 -Open` for an interactive offline preview with playback, scrubbing, turntable rotation and close-up views. The generated HTML is self-contained and works without starting Minecraft.
-
-The embedded nail bypasses the terrain-section visibility gate for its buried tip, while retaining depth testing, model frustum culling and horizontal fading. Its camera depth range covers the entire body throughout impact and aftermath.
-
-The portal opening audio has its own horizontal falloff: full strength through half its reach, then a smooth fade to a minimum 512-block radius (or twice the configured render distance, if larger). Portal altitude does not attenuate it. This applies to newly summoned nails received by the client; the server's entity-tracking/view-distance limit still controls which clients receive a nail. Ambient volume and the launch/removal fades still apply.
-
-Boundary reconciliation revisits the immediate surviving layer until a full pass makes no changes, so adjacent scaffolds cannot keep each other floating using stale support distances. Revisits resume across ticks and saves under the same shared work allowance; they do not enable unrestricted survival ticks or block drops.
-
-The boundary pass also recalculates leaf support directly: unsupported natural leaves are removed without drops, while persistent leaves and leaves with surviving support remain. This avoids cancelling vanilla's support-update tick without performing its calculation. Leaf dependencies within the immediate layer settle through the same bounded revisits.
-
-Boundary settlement includes unsupported suspicious sand/gravel (with block-entity cleanup and no falling entities) and dehydrated vanilla coral (converted to its dead counterpart). Supported brushable blocks and hydrated coral are preserved; wall-fan orientation and waterlogging remain intact.
-
-## Perfomant Boom dependency
-
-Install **Perfomant Boom 1.1.0** for the same Minecraft version and loader alongside Nail.
-Fabric targets require Fabric Loader 0.18.4 or newer.
-Nail delegates terrain clearing, fluid purge, boundary repair, work budgets and block
-lifecycle handling to Boom. Its own server mutation mixins and duplicated terrain helpers
-have been removed. Nail still owns effects, strike stages, special damage, saved progress
-and chunk ownership, preserving existing entity NBT fields.
-
-For local development, build the sibling `Perfomant-Boom` checkout first with Java 21:
-
-```sh
-# In Perfomant-Boom
-./gradlew buildAll publishToMavenLocal
-# In Celestial-Nail
-./gradlew buildAll
-./gradlew :neoforge-1.21.1:runGameTestServer
-```
-
-Dependencies use `boom_version` in `gradle.properties`. CI builds the matching Boom
-artifacts from `PERFOMANT_BOOM_REF` (repository variable, default `main`); set that variable
-to the companion Boom change while reviewing the cross-repository migration. Merge the
-Boom API before this consumer. The dependency is external, not bundled into Nail's JAR.
-
-## License
-
-Licensed under the [MIT License](LICENSE).
+Created by **NsTut**. Licensed under the [MIT License](LICENSE).

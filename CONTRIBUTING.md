@@ -1,6 +1,6 @@
 # Contributing
 
-For player setup and command examples, start with [README.md](README.md). Report bugs through [GitHub Issues](https://github.com/UpperMoon0/Celestial-Nail/issues) with game/loader versions, both Nail and Boom versions, the triggering command, logs and a minimal reproduction.
+For player setup and command examples, start with [USAGE.md](USAGE.md); command automation is covered in [INTEGRATION.md](INTEGRATION.md). Report bugs through [GitHub Issues](https://github.com/UpperMoon0/Celestial-Nail/issues) with game/loader versions, both Nail and Boom versions, the triggering command, logs and a minimal reproduction.
 
 ## Local development
 

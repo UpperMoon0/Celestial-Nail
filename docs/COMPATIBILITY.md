@@ -10,7 +10,7 @@ This matrix describes the current source targets. It does not imply that every t
 | 1.21.1 | NeoForge | 21 | Boom 1.1.0 |
 | 26.1.2 | NeoForge | 25 | Boom 1.1.0 |
 
-Fabric Loader must be at least 0.18.4. Build pins are in [gradle.properties](../gradle.properties); loader metadata is the install-time authority. Nail declares Boom `>=1.1.0 <2.0.0` and currently develops against 1.1.0. That declared range is not evidence that an arbitrary future Boom release has been tested.
+Fabric Loader must be at least 0.18.4. The NeoForge 1.21.1 artifact requires NeoForge `[21.1.228,21.2)` and Minecraft `[1.21.1,1.21.2)`. Build pins are in [gradle.properties](../gradle.properties); loader metadata is the install-time authority. Nail declares Boom `>=1.1.0 <2.0.0` and currently develops against 1.1.0. That declared range is not evidence that an arbitrary future Boom release has been tested.
 
 Install matching game/loader JARs on the server and clients. Use the runnable artifacts, excluding sources, dev, and dev-shadow JARs. Remove obsolete copies from `mods` when updating. Nail does not embed Boom. Fabric 1.21.1 still needs Architectury for Nail even though Boom's Fabric 1.21.1 implementation does not.
 
@@ -34,3 +34,5 @@ Report the exact command, game/loader/mod versions, `latest.log`, and any crash 
 ## Verification scope
 
 All five targets have build coverage. The isolated complete-impact regressions run on NeoForge 1.21.1. That suite is not a five-target visual, multiplayer, or performance certification. See [TESTING.md](../TESTING.md) and [the runtime audit](runtime-audit.md).
+
+For full command operation see [USAGE.md](../USAGE.md); for automation and Java integration boundaries see [INTEGRATION.md](../INTEGRATION.md).
