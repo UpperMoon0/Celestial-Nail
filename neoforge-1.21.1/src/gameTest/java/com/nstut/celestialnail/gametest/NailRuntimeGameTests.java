@@ -291,6 +291,112 @@ public final class NailRuntimeGameTests {
         });
     }
 
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_suspicioussand")
+    public static void fullImpactReconcilesSuspiciousSand(GameTestHelper h) {
+        boundaryBrushable(h,Blocks.SUSPICIOUS_SAND,false);
+    }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_suspiciousgravel")
+    public static void fullImpactReconcilesSuspiciousGravel(GameTestHelper h) {
+        boundaryBrushable(h,Blocks.SUSPICIOUS_GRAVEL,false);
+    }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_supportedsuspicioussand")
+    public static void fullImpactReconcilesSupportedSuspiciousSand(GameTestHelper h) {
+        boundaryBrushable(h,Blocks.SUSPICIOUS_SAND,true);
+    }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_supportedsuspiciousgravel")
+    public static void fullImpactReconcilesSupportedSuspiciousGravel(GameTestHelper h) {
+        boundaryBrushable(h,Blocks.SUSPICIOUS_GRAVEL,true);
+    }
+    private static void boundaryBrushable(GameTestHelper h,net.minecraft.world.level.block.Block block,boolean supported) {
+        var level=h.getLevel();var center=h.absolutePos(new BlockPos(7,5,7));
+        var pos=supported?center.offset(4,-1,0):center.above(5);
+        level.setBlock(pos.below(),Blocks.STONE.defaultBlockState(),3);
+        level.setBlock(pos,block.defaultBlockState(),3);
+        var original=level.getBlockEntity(pos);
+        h.assertTrue(original!=null,"Brushable fixture has no block entity");
+        var n=nail(level,center,"boundary_brushable",4);long[] finished={-1};
+        h.runAtTickTime(5,()->{
+            h.assertTrue(level.getBlockState(pos).is(block),"Brushable fell before impact");
+            h.assertTrue(level.addFreshEntity(n),"Nail not added");n.forceOwnChunk(level);impact(n,level,center);
+        });
+        h.succeedWhen(()->{
+            h.assertTrue(save(n).getBoolean("BlastCleared"),"Boundary unfinished");
+            if(finished[0]<0)finished[0]=level.getGameTime();
+            h.assertTrue(level.getGameTime()>=finished[0]+10,"Waiting for deferred gravity");
+            if(supported) {
+                h.assertTrue(level.getBlockState(pos).is(block),"Supported brushable removed");
+                h.assertTrue(level.getBlockEntity(pos)==original && !original.isRemoved(),"Supported block entity replaced or removed");
+            } else {
+                h.assertTrue(level.getBlockState(pos.below()).isAir(),"Supporting stone survived");
+                h.assertTrue(level.getBlockState(pos).isAir(),"Unsupported brushable survived");
+                h.assertTrue(level.getBlockEntity(pos)==null && original.isRemoved(),"Obsolete block entity not cleaned up");
+            }
+            h.assertFalse(level.getBlockTicks().hasScheduledTick(pos,block),"Deferred brushable tick escaped");
+            h.assertTrue(level.getEntitiesOfClass(ItemEntity.class,new AABB(center).inflate(10)).isEmpty(),"Brushable dropped items");
+            h.assertTrue(level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,new AABB(center).inflate(10)).isEmpty(),"Brushable spawned a falling entity");
+            n.discard();
+        });
+    }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_coral_dry")
+    public static void fullImpactKillsDehydratedBoundaryCoral(GameTestHelper h) { boundaryCoral(h,false); }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_coral_wet")
+    public static void fullImpactPreservesHydratedBoundaryCoral(GameTestHelper h) { boundaryCoral(h,true); }
+    private static void boundaryCoral(GameTestHelper h,boolean hydrated) {
+        var level=h.getLevel();var center=h.absolutePos(new BlockPos(7,5,7));var coral=center.above(5);
+        var water=hydrated?coral.above():coral.below();
+        for(var direction:net.minecraft.core.Direction.values()) {
+            var side=water.relative(direction);
+            if(!side.equals(coral))level.setBlock(side,Blocks.STONE.defaultBlockState(),3);
+        }
+        level.setBlock(water,Blocks.WATER.defaultBlockState(),3);
+        level.setBlock(coral,Blocks.TUBE_CORAL_BLOCK.defaultBlockState(),3);
+        var n=nail(level,center,"boundary_coral",4);long[] finished={-1};
+        h.runAtTickTime(5,()->{
+            h.assertTrue(level.addFreshEntity(n),"Nail not added");n.forceOwnChunk(level);impact(n,level,center);
+        });
+        h.succeedWhen(()->{
+            h.assertTrue(save(n).getBoolean("BlastCleared"),"Boundary unfinished");
+            if(finished[0]<0)finished[0]=level.getGameTime();
+            h.assertTrue(level.getGameTime()>=finished[0]+110,"Waiting beyond vanilla coral delay");
+            if(!hydrated)for(var direction:net.minecraft.core.Direction.values())
+                h.assertFalse(level.getFluidState(coral.relative(direction)).is(net.minecraft.tags.FluidTags.WATER),"Dry fixture still has water");
+            h.assertTrue(level.getBlockState(coral).is(hydrated?Blocks.TUBE_CORAL_BLOCK:Blocks.DEAD_TUBE_CORAL_BLOCK),"Incorrect coral hydration settlement");
+            h.assertFalse(level.getBlockTicks().hasScheduledTick(coral,Blocks.TUBE_CORAL_BLOCK),"Deferred coral death escaped");
+            h.assertTrue(level.getEntitiesOfClass(ItemEntity.class,new AABB(center).inflate(10)).isEmpty(),"Coral conversion dropped items");
+            n.discard();
+        });
+    }
+
+    @GameTest(template="empty",timeoutTicks=30,batch="nail_coral_variants")
+    public static void coralVariantsPreserveHydrationAndWallOrientation(GameTestHelper h) throws Exception {
+        var level=h.getLevel();var pos=h.absolutePos(new BlockPos(3,5,3));
+        level.setBlock(pos.below(),Blocks.STONE.defaultBlockState(),3);
+        level.setBlock(pos.west(),Blocks.STONE.defaultBlockState(),3);
+        for(String color:new String[]{"TUBE","BRAIN","BUBBLE","FIRE","HORN"})
+            for(String suffix:new String[]{"_CORAL_BLOCK","_CORAL","_CORAL_FAN","_CORAL_WALL_FAN"}) {
+                var live=(net.minecraft.world.level.block.Block)Blocks.class.getField(color+suffix).get(null);
+                var dead=(net.minecraft.world.level.block.Block)Blocks.class.getField("DEAD_"+color+suffix).get(null);
+                var state=live.defaultBlockState();
+                if(state.hasProperty(BlockStateProperties.WATERLOGGED))state=state.setValue(BlockStateProperties.WATERLOGGED,false);
+                if(state.hasProperty(BlockStateProperties.HORIZONTAL_FACING))state=state.setValue(BlockStateProperties.HORIZONTAL_FACING,net.minecraft.core.Direction.EAST);
+                NailWorldOperations.replaceWithoutDrops(level,pos,state);
+                var next=NailWorldOperations.reconcileBoundary(level,pos,state);
+                h.assertTrue(next.is(dead),"Dry coral variant not converted: "+color+suffix);
+                if(state.hasProperty(BlockStateProperties.HORIZONTAL_FACING))
+                    h.assertTrue(next.getValue(BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.EAST,"Wall fan orientation lost");
+                level.setBlock(pos.above(),Blocks.WATER.defaultBlockState(),2);
+                h.assertTrue(NailWorldOperations.reconcileBoundary(level,pos,state)==state,"Externally hydrated coral converted");
+                level.setBlock(pos.above(),Blocks.AIR.defaultBlockState(),2);
+                if(state.hasProperty(BlockStateProperties.WATERLOGGED)) {
+                    var wet=state.setValue(BlockStateProperties.WATERLOGGED,true);
+                    NailWorldOperations.replaceWithoutDrops(level,pos,wet);
+                    h.assertTrue(NailWorldOperations.reconcileBoundary(level,pos,wet)==wet,"Waterlogged coral converted");
+                }
+            }
+        NailWorldOperations.replaceWithoutDrops(level,pos,Blocks.AIR.defaultBlockState());
+        h.succeed();
+    }
+
     @GameTest(template="empty",timeoutTicks=30,batch="nail_deferred")
     public static void boundarySuppressesDeferredBlockTicksButKeepsFluidsAndOrdinaryTicks(GameTestHelper h) {
         var level=h.getLevel();var pos=h.absolutePos(new BlockPos(3,4,3));

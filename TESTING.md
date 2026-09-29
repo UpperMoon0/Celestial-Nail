@@ -26,7 +26,7 @@ This compiles and packages Fabric/Forge 1.20.1, Fabric/NeoForge 1.21.1 and NeoFo
 ./gradlew :neoforge-1.21.1:runGameTestServer
 ```
 
-This launches a disposable GameTest server in `neoforge-1.21.1/run/runtime-tests`. It never connects to the player's server or existing smoke world. Tests live in an isolated `gameTest` source set and are not shipped in the production jar. The dedicated runtime task exits nonzero when required tests fail. Successful evidence must include **all seventeen required tests**, not merely a server startup message.
+This launches a disposable GameTest server in `neoforge-1.21.1/run/runtime-tests`. It never connects to the player's server or existing smoke world. Tests live in an isolated `gameTest` source set and are not shipped in the production jar. The dedicated runtime task exits nonzero when required tests fail. Successful evidence must include **all twenty-four required tests**, not merely a server startup message.
 
 The suite exercises:
 
@@ -47,6 +47,10 @@ The suite exercises:
 15. Persistent boundary leaves survive while their distance is recalculated to 7 after losing support.
 16. Natural leaves retain distance 1 when a surviving external log supports them.
 17. Adjacent unsupported boundary leaves settle through repeated bounded passes instead of retaining stale mutual support.
+18–19. Complete impacts remove unsupported suspicious sand and gravel, unregister their block entities, and produce neither items nor falling entities.
+20–21. Supported suspicious sand and gravel retain their original live block entities.
+22–23. Complete impacts convert dry boundary coral and preserve coral with surviving external water, checking beyond the native delayed-death interval.
+24. All twenty vanilla coral variants convert when dry, preserve external hydration/waterlogging, and retain wall-fan orientation.
 
 Some fixtures use reflection to enter the entity's private impact/completion stages deterministically; no test-only accessors are added to production code. These exercise actual ServerLevel/entity/block behavior, but they are not command/network end-to-end tests or process-restart tests.
 
@@ -82,7 +86,7 @@ Forge 1.20.1 supplies `pack.mcmeta` (resource format 15) in its own resources di
 
 Client position updates interpolate over two ticks instead of snapping. Descent starts at 2.5 blocks/tick, accelerates by 0.65 to a cap of 18, and swept collision still checks the entire traveled segment. Ground penetration uses an 18-tick ease-out, evaluated at partial ticks for rendering. Removal lasts 54 ticks: subtle separation along real fragment boundaries, staggered fragment release, rigid tumbling around local pivots, accelerating downward movement and dust. Removal still cancels damage and terrain work immediately.
 
-All five builds and 32 shared tests pass. The NeoForge runtime suite now passes seventeen required tests, including interpolation without snapping/overshoot and fast descent onto a single-block floor. These checks do not establish live multiplayer smoothness or visual performance on every GPU. The player's running client was left untouched.
+All five builds and 32 shared tests pass. The NeoForge runtime suite now passes twenty-four required tests, including interpolation without snapping/overshoot and fast descent onto a single-block floor. These checks do not establish live multiplayer smoothness or visual performance on every GPU. The player's running client was left untouched.
 
 For an offline removal preview, first run `tools/render_nail_shader_job.ps1`, then `python tools/preview_crumble.py` with Java 21, the same Python dependencies and ffmpeg available. It exports the production fracture geometry and rigid transforms to an 82-frame, 30 FPS video at `build/crystal-glint-preview/crumble.mp4`, with a local `crumble.html` player and contact sheet. This studio preview excludes dust, world collision and audio. The contact sheet was inspected and both production shader variants compiled on the GPU.
 
@@ -96,3 +100,10 @@ The complete-impact adjacent-scaffolding regression failed before the correction
 Vanilla leaf shape updates schedule distance recalculation instead of changing the state immediately. The bounded adapter performs that six-neighbor calculation directly using the version's `LeavesBlock.getOptionalDistanceAt` (including version-specific support tags). Unsupported natural leaves are replaced through the no-drop path immediately; persistent leaves retain their properties and receive the corrected distance. Waterlogged leaf reconciliation preserves permitted fluid scheduling. The existing readiness guard covers all six reads, and changed states participate in the saved, budgeted revisits.
 
 Before the correction, the natural-leaf, adjacent-leaf and persistent-distance full-impact regressions failed; the supported-leaf control and previous thirteen tests passed (`build/boundary-leaves-before.log`). Post-fix results are recorded in `build/boundary-leaves-after.log`. Runtime coverage is NeoForge 1.21.1; the other adapters are build-verified.
+
+
+## Brushable gravity and coral hydration
+
+Unsupported brushable blocks use the same bounded no-drop replacement as ordinary falling blocks, including the existing version-specific block-entity cleanup. Supported brushable blocks remain intact. The adapter resolves hydration for all twenty vanilla live coral blocks, plants, floor fans and wall fans; dry coral becomes its corresponding dead state with shared properties preserved. Waterlogged coral and coral with adjacent water stay alive. This explicit vanilla mapping does not claim support for custom modded coral death variants.
+
+The full-impact suspicious-sand, suspicious-gravel and dry-coral regressions failed before the fix, while the prior seventeen tests and three preservation controls passed (`build/brushable-coral-before.log`). The corrected suite and all-target build output are in `build/brushable-coral-after.log`. Runtime evidence remains NeoForge 1.21.1; 1.20.1 and 26.1.2 have source/build verification. No unrestricted native gravity or coral death callbacks are enabled.

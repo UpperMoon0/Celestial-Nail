@@ -102,3 +102,5 @@ The portal opening audio has its own horizontal falloff: full strength through h
 Boundary reconciliation revisits the immediate surviving layer until a full pass makes no changes, so adjacent scaffolds cannot keep each other floating using stale support distances. Revisits resume across ticks and saves under the same shared work allowance; they do not enable unrestricted survival ticks or block drops.
 
 The boundary pass also recalculates leaf support directly: unsupported natural leaves are removed without drops, while persistent leaves and leaves with surviving support remain. This avoids cancelling vanilla's support-update tick without performing its calculation. Leaf dependencies within the immediate layer settle through the same bounded revisits.
+
+Boundary settlement includes unsupported suspicious sand/gravel (with block-entity cleanup and no falling entities) and dehydrated vanilla coral (converted to its dead counterpart). Supported brushable blocks and hydrated coral are preserved; wall-fan orientation and waterlogging remain intact.
