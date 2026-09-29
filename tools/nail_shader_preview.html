@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Celestial Nail • Light study</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07101c;color:#dfeafa;font:15px system-ui,sans-serif}main{height:100vh;display:grid;grid-template-columns:1fr 290px}canvas{width:100%;height:100%;display:block;cursor:grab}aside{padding:30px 24px;border-left:1px solid #203345;background:#0b1623;overflow:auto}h1{font-size:25px;line-height:1.1;letter-spacing:-.8px;margin:12px 0}small{color:#78b9d1;font-size:10px;letter-spacing:2px;text-transform:uppercase}p{color:#94a8ba;line-height:1.55;font-size:13px}button,select{width:100%;padding:10px;margin:7px 0;background:#142b3b;color:#dcf8ff;border:1px solid #2b4a5c;border-radius:7px;font:inherit;cursor:pointer}label{display:block;margin-top:23px;font-size:12px;color:#9db2c5}input[type=range]{width:100%;accent-color:#5fceee;margin:12px 0}input[type=checkbox]{accent-color:#5fceee}output{float:right;color:#c4f2ff}.note{border-top:1px solid #243648;margin-top:28px;padding-top:18px}#error{position:absolute;top:20px;left:20px;color:#ffada1;white-space:pre-wrap;max-width:70%}@media(max-width:650px){main{grid-template-columns:1fr;grid-template-rows:65vh auto;height:auto}aside{border-left:0}}
+</style>
+<main><canvas id="scene" aria-label="Animated Celestial Nail model. Drag to rotate."></canvas><aside>
+<small>Offline light study</small><h1>Celestial Nail</h1><p>Crystal light and a flowing pulse, rendered live. No Minecraft client needed.</p>
+<button id="play">Pause animation</button><select id="view" aria-label="Camera view"><option value="full">Whole nail</option><option value="crown">Crown & inlays</option><option value="tip">Fractured crystal</option></select>
+<label>Time <output id="timeLabel">0.00 s</output><input id="time" type="range" min="0" max="240" step=".01" value="0"></label>
+<label>Playback speed <output id="speedLabel">1×</output><input id="speed" type="range" min=".1" max="2" step=".1" value="1"></label>
+<label><input id="pulse" type="checkbox" checked> Flowing pulse</label><label><input id="rotate" type="checkbox"> Slow turntable</label>
+<p>Drag the model to rotate. Pause and scrub time to inspect a highlight.</p><p class="note">Uses the exported game mesh, pixel atlas and fragment shader. Neutral studio lighting; world fog, portal and terrain are excluded.</p>
+</aside></main><pre id="error" role="alert"></pre>
+<script>
+const data=__PREVIEW_DATA__;
+try {
+const canvas=document.getElementById('scene'), gl=canvas.getContext('webgl2',{antialias:true,alpha:false});
+if(!gl)throw Error('This preview needs a browser with WebGL 2 enabled.');
+function compile(type,source){let s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s}
+let program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,data.vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,data.fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);
+function decode(s){let b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+function mesh(bytes){let raw=decode(bytes),vao=gl.createVertexArray();gl.bindVertexArray(vao);let b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,raw,gl.STATIC_DRAW);for(let [name,n,offset] of [['Position',3,0],['Color',4,12],['UV0',2,28]]){let a=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,n,gl.FLOAT,false,36,offset)}return {vao,count:raw.length/36}}
+const model=mesh(data.model),pulseMesh=mesh(data.pulse),uniform=n=>gl.getUniformLocation(program,n);
+let tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,128,16,0,gl.RGBA,gl.UNSIGNED_BYTE,decode(data.atlas));gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+gl.uniform1i(uniform('Sampler0'),0);gl.uniform4f(uniform('ColorModulator'),1,1,1,1);gl.enable(gl.DEPTH_TEST);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+const play=document.getElementById('play'),time=document.getElementById('time'),view=document.getElementById('view'),speed=document.getElementById('speed'),pulse=document.getElementById('pulse'),rotate=document.getElementById('rotate');
+let running=true,seconds=0,yaw=198*Math.PI/180,last=performance.now(),drag=null;
+play.onclick=()=>{running=!running;play.textContent=running?'Pause animation':'Play animation'};
+time.oninput=()=>{seconds=Number(time.value);running=false;play.textContent='Play animation'};
+canvas.onpointerdown=e=>{drag=e.clientX;canvas.setPointerCapture(e.pointerId)};canvas.onpointermove=e=>{if(drag!==null){yaw+=(e.clientX-drag)*.009;drag=e.clientX}};canvas.onpointerup=()=>drag=null;canvas.onpointercancel=()=>drag=null;
+function frame(now){let dt=Math.min((now-last)/1000,.1);last=now;if(running)seconds=(seconds+dt*Number(speed.value))%240;if(rotate.checked&&running)yaw+=dt*.12;
+let w=Math.round(canvas.clientWidth*Math.min(devicePixelRatio,2)),h=Math.round(canvas.clientHeight*Math.min(devicePixelRatio,2));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}gl.viewport(0,0,w,h);
+let center=3.81,extent=4.05;if(view.value==='crown'){center=6.48;extent=1.3}if(view.value==='tip'){center=1.2;extent=1.45}
+let c=Math.cos(yaw),s=Math.sin(yaw),wide=extent*w/h;
+gl.uniformMatrix4fv(uniform('ModelViewMat'),false,new Float32Array([c,0,-s,0,0,1,0,0,s,0,c,0,0,-center,-14,1]));gl.uniformMatrix4fv(uniform('ProjMat'),false,new Float32Array([1/wide,0,0,0,0,1/extent,0,0,0,0,-2/30,0,0,0,-1,1]));gl.uniform1f(uniform('PreviewAge'),seconds*20);
+gl.clearColor(.025,.045,.075,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.disable(gl.BLEND);gl.depthMask(true);gl.bindVertexArray(model.vao);gl.drawArrays(gl.TRIANGLES,0,model.count);
+if(pulse.checked){gl.enable(gl.BLEND);gl.depthMask(false);gl.bindVertexArray(pulseMesh.vao);gl.drawArrays(gl.TRIANGLES,0,pulseMesh.count);gl.depthMask(true)}
+time.value=seconds;document.getElementById('timeLabel').value=seconds.toFixed(2)+' s';document.getElementById('speedLabel').value=speed.value+'×';window.previewReady=true;requestAnimationFrame(frame)}requestAnimationFrame(frame);
+}catch(e){document.getElementById('error').textContent=e.message;console.error(e)}
+</script></html>

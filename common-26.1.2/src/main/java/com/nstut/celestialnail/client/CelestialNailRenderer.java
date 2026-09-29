@@ -120,7 +120,7 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
         NailMeshClipper.emit(CelestialNailMesh.BODY,ceiling,(f,p,u,v)->{
             if(!f.emissive())return;
             var offset=new CelestialNailMesh.Point(p.x()+f.normal().x()*.002F,p.y()+f.normal().y()*.002F,p.z()+f.normal().z()*.002F);
-            vertex(pose,out,effectFace(f,9),offset,p.y()/CelestialNailMesh.HEIGHT,phase,light,alpha);
+            vertex(pose,out,effectFace(f,9),offset,u,v,light,alpha,phase);
         });
     }
     private static void drawBody(PoseStack.Pose pose,VertexConsumer out,int light,float ceiling,float alpha,float crumble,float age) {
@@ -172,6 +172,14 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
             u=2+face.material()+s*.9F;
             int seed=(Float.floatToIntBits(face.a().x()*17+face.a().y()*31+face.a().z()*47)&0x7fffffff)%251;
             v=seed+t*.9F;
+        }
+        if(face.material()==9) {
+            // Pulse: precise longitudinal height/phase in UV; facet UV and seed in RGB.
+            // It follows the glass instead of forming a uniformly lit band around the nail.
+            u=-5+point.y()/CelestialNailMesh.HEIGHT; v=age;
+            shade=s; green=t;
+            int seed=(Float.floatToIntBits(face.a().x()*17+face.a().y()*31+face.a().z()*47)&0x7fffffff)%251;
+            blue=seed/255F;
         }
         out.addVertex(pose, point.x(), point.y(), point.z()).setColor(shade, green, blue, alpha)
                     .setUv(u, v);

@@ -53,10 +53,23 @@ vec4 effect(vec2 uv,vec4 color){
   return vec4(mix(vec3(.18,.65,1.0),vec3(.78,.96,1.0),edge),min(.65,(edge*.5+haze)*wisps)*color.a);
  }
  if(uv.x > -5.5){
-  float y=uv.x+5.0,phase=uv.y;
-  float core=exp(-pow((y-phase)/.008,2.0));
-  float trail=exp(-pow((y-phase-.022)/.026,2.0))*.20;
-  return vec4(.32,.84,1.0,min(.85,core*.7+trail)*color.a);
+  float height=uv.x+5.0, phase=uv.y;
+  vec2 facet=color.rg;
+  float seed=hash3(vec3(color.b*255.0,7.0,19.0));
+  // Offset arrival on each facet; no continuous horizontal ring or hard leading edge.
+  float distance=height-phase+(seed-.5)*.075+.009*sin(facet.x*6.28+seed*13.0);
+  float front=exp(-pow(distance/.023,2.0));
+  float wake=exp(-max(distance,0.0)/.095)*smoothstep(0.0,.028,distance);
+  float threads=.5+.5*sin(facet.x*17.0+sin(facet.y*8.0+seed*12.0)*1.1+seed*24.0);
+  float silk=pow(threads,10.0);
+  float broad=pow(.5+.5*sin(facet.x*8.0-facet.y*3.0+seed*18.0),3.0);
+  float envelope=smoothstep(0.0,.06,phase)*(1.0-smoothstep(.94,1.0,phase));
+  float energy=(front*(.09+.30*silk+.10*broad)+wake*(.025+.10*silk))*envelope;
+  vec3 normal=normalize(cross(dFdx(viewPosition),dFdy(viewPosition)));
+  float facing=abs(dot(normal,normalize(-viewPosition)));
+  energy*=.65+.35*facing;
+  vec3 tint=mix(vec3(.055,.32,.85),vec3(.48,.91,1.0),front*.8+silk*.2);
+  return vec4(tint,min(.48,energy)*color.a);
  }
  // Crack veins precede the breakup; dark space between veins remains transparent.
  float h=hash3(floor(localPosition*13.0));

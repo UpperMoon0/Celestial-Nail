@@ -25,6 +25,7 @@
     "architectury": ">=13.0.8"
   },
   "mixins": [
-    "celestial_nail.client.mixins.json"
+    "celestial_nail.client.mixins.json",
+    "celestial_nail.server.mixins.json"
   ]
 }

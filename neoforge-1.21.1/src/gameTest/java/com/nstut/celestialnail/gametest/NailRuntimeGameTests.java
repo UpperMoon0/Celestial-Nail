@@ -164,4 +164,67 @@ public final class NailRuntimeGameTests {
         h.assertTrue(after.getInt("PurgePass")==2,"Completed purge phase was lost on NBT round trip");
         n.discard();restored.discard();h.succeed();
     }
+    @GameTest(template="empty",timeoutTicks=100,batch="nail_callback_cold")
+    public static void removingTripwireDoesNotLoadColdNeighbor(GameTestHelper h) {
+        var level=h.getLevel();var local=new ChunkPos(h.absolutePos(new BlockPos(2,2,2)));
+        var chunk=level.getChunk(local.x+2048,local.z+2048);
+        var pos=new BlockPos(chunk.getPos().getMinBlockX(),100,chunk.getPos().getMaxBlockZ());
+        // Install an existing wire without running placement callbacks as part of the fixture.
+        chunk.getSection(chunk.getSectionIndex(pos.getY())).setBlockState(0,pos.getY()&15,15,Blocks.TRIPWIRE.defaultBlockState());
+        h.assertFalse(level.isLoaded(pos.west()),"West neighbor must start cold");
+        h.assertFalse(level.isLoaded(pos.south()),"South neighbor must start cold");
+        h.assertTrue(NailWorldOperations.replaceWithoutDrops(level,pos,Blocks.AIR.defaultBlockState()),"Wire removal failed");
+        h.assertFalse(level.isLoaded(pos.west()),"Removal callback loaded west neighbor");
+        h.assertFalse(level.isLoaded(pos.south()),"Removal callback loaded south neighbor");
+        h.succeed();
+    }
+    @GameTest(template="empty",timeoutTicks=400,batch="nail_scaffolding")
+    public static void fullImpactRemovesUnsupportedScaffoldingWithoutDeferredDrops(GameTestHelper h) {
+        var level=h.getLevel();var center=h.absolutePos(new BlockPos(7,5,7));
+        var support=center.above(4);var scaffold=support.above();
+        level.setBlock(support,Blocks.STONE.defaultBlockState(),3);
+        level.setBlock(scaffold,Blocks.SCAFFOLDING.defaultBlockState().setValue(net.minecraft.world.level.block.ScaffoldingBlock.DISTANCE,0),3);
+        var n=nail(level,center,"scaffolding_boundary",4);
+        long[] finished={-1};
+        h.runAtTickTime(5,()->{
+            h.assertTrue(level.getBlockState(scaffold).is(Blocks.SCAFFOLDING),"Scaffolding fixture did not settle");
+            h.assertTrue(level.addFreshEntity(n),"Nail not added");n.forceOwnChunk(level);impact(n,level,center);
+        });
+        h.succeedWhen(()->{
+            h.assertTrue(save(n).getBoolean("BlastCleared"),"Blast/boundary pass is not finished");
+            if(finished[0]<0)finished[0]=level.getGameTime();
+            h.assertTrue(level.getGameTime()>=finished[0]+10,"Waiting for deferred survival ticks");
+            h.assertTrue(level.getBlockState(support).isAir(),"Support inside sphere survived");
+            h.assertTrue(level.getBlockState(scaffold).isAir(),"Unsupported boundary scaffolding survived");
+            h.assertTrue(level.getEntitiesOfClass(ItemEntity.class,new AABB(center).inflate(10)).isEmpty(),"Boundary survival tick created drops");
+            h.assertTrue(level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,new AABB(center).inflate(10)).isEmpty(),"Boundary spawned a falling block");
+            n.discard();
+        });
+    }
+
+    @GameTest(template="empty",timeoutTicks=30,batch="nail_deferred")
+    public static void boundarySuppressesDeferredBlockTicksButKeepsFluidsAndOrdinaryTicks(GameTestHelper h) {
+        var level=h.getLevel();var pos=h.absolutePos(new BlockPos(3,4,3));
+        level.setBlock(pos.below(),Blocks.STONE.defaultBlockState(),3);
+        var scaffold=Blocks.SCAFFOLDING.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.ScaffoldingBlock.DISTANCE,0)
+                .setValue(BlockStateProperties.WATERLOGGED,true);
+        level.setBlock(pos,scaffold,3);
+        var bounds=new net.minecraft.world.level.levelgen.structure.BoundingBox(pos.getX(),pos.getY(),pos.getZ(),pos.getX(),pos.getY(),pos.getZ());
+        level.getBlockTicks().clearArea(bounds);level.getFluidTicks().clearArea(bounds);
+        var next=NailWorldOperations.reconcileBoundary(level,pos,scaffold);
+        h.assertTrue(next.is(Blocks.SCAFFOLDING),"Supported scaffolding was removed");
+        h.assertFalse(level.getBlockTicks().hasScheduledTick(pos,Blocks.SCAFFOLDING),"Boundary queued destructive block work");
+        h.assertTrue(level.getFluidTicks().hasScheduledTick(pos,net.minecraft.world.level.material.Fluids.WATER),"Boundary suppressed permitted water flow");
+        // Exercise the generic scheduled-survival path, not only the scaffolding special case.
+        var sandPos=pos.offset(3,0,0);level.setBlock(sandPos.below(),Blocks.STONE.defaultBlockState(),3);
+        var sand=Blocks.SAND.defaultBlockState();NailWorldOperations.replaceWithoutDrops(level,sandPos,sand);
+        NailWorldOperations.reconcileBoundary(level,sandPos,sand);
+        h.assertFalse(level.getBlockTicks().hasScheduledTick(sandPos,Blocks.SAND),"Shape check leaked a sand survival tick");
+        level.scheduleTick(pos,Blocks.SCAFFOLDING,1);
+        h.assertTrue(level.getBlockTicks().hasScheduledTick(pos,Blocks.SCAFFOLDING),"Scoped suppression leaked into ordinary world ticks");
+        h.assertFalse(com.nstut.celestialnail.NailMutationScope.active(),"Mutation scope leaked");
+        h.succeed();
+    }
+
 }

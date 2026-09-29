@@ -341,7 +341,7 @@ public final class CelestialNailEntity extends Entity {
                 var state = level.getBlockState(pos);
                 if (!state.isAir()) {
                     // Reconcile one surviving boundary layer. Do not unleash recursive neighbor cascades.
-                    var next = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(state, level, pos);
+                    var next = NailWorldOperations.reconcileBoundary(level, pos, state);
                     if (next != state && NailWorldOperations.replaceWithoutDrops(level, pos, next)) budget.changed();
                 }
             }
