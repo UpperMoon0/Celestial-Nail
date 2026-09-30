@@ -65,8 +65,14 @@ public final class CelestialNailMesh {
         }
         DEBRIS=List.copyOf(model.faces);
         model.faces.clear();
-        // A carrier quad only: its transparent radial wave is entirely procedural in the fragment shader.
-        model.face(p(-1,0,-1),p(-1,0,1),p(1,0,1),p(1,0,-1),8);
+        // Ordinary geometry survives replacement of Minecraft's shaders by Iris/Oculus.
+        for(int i=0;i<192;i++) {
+            double a=i*Math.PI*2/192,b=(i+1)*Math.PI*2/192;
+            for(int band=0;band<4;band++) {
+                double inner=.86+band*.02,outer=inner+.02;
+                model.face(radial(a,inner,0),radial(b,inner,0),radial(b,outer,0),radial(a,outer,0),8);
+            }
+        }
         SHOCK_SURFACE=List.copyOf(model.faces);
         model.faces.clear(); model.ring(0,1,.035,.006,7); IMPACT_COLUMN=List.copyOf(model.faces);
     }

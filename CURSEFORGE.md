@@ -82,3 +82,7 @@ A fan-made Minecraft interpretation of Genshin Impact’s Celestial Nails. The d
 [Source and documentation](https://github.com/UpperMoon0/Celestial-Nail) · [Report a problem](https://github.com/UpperMoon0/Celestial-Nail/issues)
 
 Created by **NsTut**. Licensed under the **MIT License**.
+
+### Rendering compatibility
+
+The nail uses vanilla entity rendering with lightmap and normal lighting. Crystals remain luminous; portal and impact effects use vanilla emissive rendering. Shader packs control bloom and fog. This replaces the custom core shader that could disappear under shader replacement. The mod does not add dynamic block lighting.

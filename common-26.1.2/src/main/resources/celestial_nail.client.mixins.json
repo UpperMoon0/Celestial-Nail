@@ -7,7 +7,6 @@
     "CameraMixin",
     "GuiMixin",
     "SoundEngineMixin",
-    "RenderTypeInvoker",
     "LevelRendererMixin"
   ],
   "injectors": {

@@ -69,7 +69,7 @@ The two review regressions were reproduced locally against the pre-fix implement
 
 Older engines suppress nail-scoped `onRemove`/`onPlace` dispatch and explicitly unregister obsolete block entities; the normal level mutation still updates lighting, height maps, POIs, persistence and client notifications. The newer engine uses its native side-effect/placement flags. All three adapters reconcile survival immediately; scaffolding distance/bottom properties are resolved directly, unsupported gravity blocks are removed without falling entities, and deferred block ticks from shape checks are suppressed. Fluid ticks remain permitted. This intentionally does not run recursive redstone or arbitrary mod callbacks outside the bounded pass.
 
-## Animated shader review without Minecraft
+## Historical custom-shader review without Minecraft
 
 Run `tools/render_nail_shader_job.ps1 -Open` after installing Python `numpy Pillow moderngl glcontext`. It exports the current game mesh, compiles both GLSL variants on the GPU, verifies independent animation/view response and pulse visibility, and produces two GIFs plus a self-contained `build/crystal-glint-preview/preview.html` viewer. The viewer offers play/pause, time scrubbing, speed, rotation, pulse toggle and full/crown/tip views. All mesh, atlas and shader data are embedded; opening the HTML does not require network access or a Minecraft process. Browser review confirmed rendering, camera preset changes, time scrubbing and resumed playback. Studio lighting replaces world lighting; portal/world effects and live-client integration remain outside this preview.
 
@@ -115,3 +115,9 @@ All terrain mutation tests now exercise Boom's external API and mixins. The thre
 and cursors no longer live in Nail; the entity keeps its existing persisted cursor fields.
 When iterating on Boom at the same version, refresh Nail's dependency cache with
 `--refresh-dependencies` before validating it again.
+
+## Vanilla entity pipeline and shader-pack checks
+
+The production renderer now uses vanilla `entityTranslucent` and `entityTranslucentEmissive` with complete entity vertices (UV, overlay, lightmap, normal). `NailSurfaceTest` checks real atlas coordinates through the lifecycle, pulse clipping inside long facets, rigid fragment normal rotation and the shockwave annulus. The old offline custom-shader preview remains historical evidence only.
+
+Use a disposable client world. Compare the ivory/metal shell at noon, midnight and beside a torch; rotate the view and observe facet shading. Check emergence, portal, traveling pulse, impact ring and removal with shaders disabled and enabled. Reload resources and toggle the pack repeatedly. Vanilla and pack fog now apply to the nail, so repeat at a height inside the configured fog range before diagnosing visibility. Shader-pack bloom or illumination of nearby blocks is not guaranteed by full-bright entity materials.
