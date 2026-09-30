@@ -6,7 +6,4 @@ public final class CelestialNail {
 
     private CelestialNail() {
     }
-
-    public static void init() {
-    }
 }

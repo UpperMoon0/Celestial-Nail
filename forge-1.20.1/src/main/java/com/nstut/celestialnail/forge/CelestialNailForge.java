@@ -26,7 +26,6 @@ public final class CelestialNailForge {
             .build(CelestialNail.MOD_ID + ":celestial_nail"));
 
     public CelestialNailForge() {
-        CelestialNail.init();
         ENTITIES.register(FMLJavaModLoadingContext.get().getModEventBus());
         SOUNDS.register(FMLJavaModLoadingContext.get().getModEventBus());
         MinecraftForge.EVENT_BUS.addListener(this::registerCommands);

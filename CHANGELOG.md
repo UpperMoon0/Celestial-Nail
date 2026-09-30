@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Remove the empty starter-template initialization hook and its loader calls; keep registration in the existing loader entry points.
 - Adopt MIT licensing across source, loader metadata and packaged JARs.
 - Add validated five-target CurseForge/GitHub release automation with required project IDs and a pinned Boom dependency.
 

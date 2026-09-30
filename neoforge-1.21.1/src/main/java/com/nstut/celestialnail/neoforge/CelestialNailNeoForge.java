@@ -27,7 +27,6 @@ public final class CelestialNailNeoForge {
             .build(CelestialNail.MOD_ID + ":celestial_nail"));
 
     public CelestialNailNeoForge(IEventBus modBus) {
-        CelestialNail.init();
         ENTITIES.register(modBus);
         SOUNDS.register(modBus);
         NeoForge.EVENT_BUS.register(this);

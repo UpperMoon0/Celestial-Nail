@@ -24,7 +24,6 @@ public final class CelestialNailFabric implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        CelestialNail.init();
         Registry.register(BuiltInRegistries.SOUND_EVENT, CelestialNailSounds.PORTAL_ID, CelestialNailSounds.PORTAL_OPEN);
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> CelestialNailCommands.register(dispatcher, () -> NAIL));
     }
