@@ -2,7 +2,6 @@
 
 ## Unreleased
 
-- Remove the empty starter-template initialization hook and its loader calls; keep registration in the existing loader entry points.
 - Adopt MIT licensing across source, loader metadata and packaged JARs.
 - Add validated five-target CurseForge/GitHub release automation with required project IDs and a pinned Boom dependency.
 
@@ -28,6 +27,10 @@
 - Added the supplied opening audio as a ten-second streaming mono Ogg with a smooth fade, preserving its source and conversion tool.
 - Fixed fluid cleanup with bounded top-down water/lava sweeps and safe impact chunk loading.
 - Added geometry, clipping, timing, scale and purge traversal checks, a live fluid smoke test, and reproducible model previews.
+
+## 0.1.1
+
+[Full notes](changelog/0.1.1.md): remove empty starter-template initialization hooks across all supported loaders.
 
 ## 0.1.0
 
