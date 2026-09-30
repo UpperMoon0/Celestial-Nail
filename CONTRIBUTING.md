@@ -26,7 +26,7 @@ If you republish Boom under the same version, stop the dev client and run Nail's
 - Preserve saved field meanings or provide an explicit migration. Check cancellation and chunk ownership when changing stages.
 - Inspect the exact version's vanilla/loader code for lifecycle changes; record evidence and limitations rather than assuming cross-version equivalence.
 - Use [TESTING.md](TESTING.md) to select meaningful regression and runtime checks. A build does not prove rendering or a complete impact.
-- Update [CHANGELOG.md](CHANGELOG.md), compatibility guidance and [CURSEFORGE.md](CURSEFORGE.md) when users' setup or behavior changes.
+- Update the appropriate `changelog/<version>.md`, compatibility guidance and [CURSEFORGE.md](CURSEFORGE.md) when users' setup or behavior changes.
 
 CI resolves Boom from repository variable `PERFOMANT_BOOM_REF`, defaulting to `main`. Coordinate API and consumer revisions and land the Boom API first. See [RELEASING.md](RELEASING.md) for release preparation; the publisher requires configured CurseForge IDs, a pinned Boom commit and passing validation.
 
