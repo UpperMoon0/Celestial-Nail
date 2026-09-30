@@ -78,7 +78,7 @@ For source builds, run Gradle on Java 21 with Java 17/21/25 target toolchains. F
 - [Compatibility and troubleshooting](docs/COMPATIBILITY.md)
 - [Detailed behavior and visual reference](docs/REFERENCE.md)
 - [Architecture](docs/ARCHITECTURE.md), [contributing](CONTRIBUTING.md) and [testing](TESTING.md)
-- [Releasing](RELEASING.md), [changelog](CHANGELOG.md) and [CurseForge description source](CURSEFORGE.md)
+- [Releasing](RELEASING.md), [versioned release notes](changelog/) and [CurseForge description source](CURSEFORGE.md)
 
 Report issues with game/loader versions, Nail and Boom versions, the command used, reproduction steps and logs through [GitHub Issues](https://github.com/UpperMoon0/Celestial-Nail/issues). Build coverage spans all five targets; complete-impact runtime tests focus on NeoForge 1.21.1 and do not certify every target's visuals or performance.
 

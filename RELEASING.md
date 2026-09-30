@@ -7,7 +7,7 @@
 ## Prepare a release
 
 1. Make the required Boom API/artifacts available first. Match Nail's `boom_version` and ensure CI's `PERFOMANT_BOOM_REF` resolves that implementation.
-2. Set `mod_version` in [gradle.properties](gradle.properties) for the intended release, consolidate the Unreleased notes in [CHANGELOG.md](CHANGELOG.md), and update [compatibility](docs/COMPATIBILITY.md) and [CURSEFORGE.md](CURSEFORGE.md).
+2. Set `mod_version` in [gradle.properties](gradle.properties) for the intended release, add the matching `changelog/<version>.md`, and update [compatibility](docs/COMPATIBILITY.md) and [CURSEFORGE.md](CURSEFORGE.md).
 3. Publish the matching Boom artifacts to Maven local, then run `./gradlew :common:test buildAll` and `./gradlew :neoforge-1.21.1:runGameTestServer` from Nail with Gradle on Java 21.
 4. Retain runtime evidence and explicitly record untested loaders/features. Exercise summon, emergence, launch, impact, removal and world reload in disposable worlds for the affected target. Check that the actual loaded Boom JAR contains the current API, especially after same-version local iteration.
 5. Collect only the runnable JARs below, check embedded version/dependency metadata and record checksums against the release commit. Exclude `sources`, `dev` and `dev-shadow` artifacts.

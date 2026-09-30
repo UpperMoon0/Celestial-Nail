@@ -30,7 +30,6 @@ public final class CelestialNailNeoForge {
             .build(NAIL_KEY));
 
     public CelestialNailNeoForge(IEventBus modBus) {
-        CelestialNail.init();
         ENTITIES.register(modBus);
         SOUNDS.register(modBus);
         NeoForge.EVENT_BUS.addListener(this::registerCommands);
