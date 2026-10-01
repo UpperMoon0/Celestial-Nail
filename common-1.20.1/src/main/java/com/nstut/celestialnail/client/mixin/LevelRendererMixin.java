@@ -16,6 +16,11 @@ public abstract class LevelRendererMixin {
     @Unique private boolean celestialNail$renderingNail;
     @Shadow public abstract boolean isChunkCompiled(BlockPos pos);
 
+    @org.spongepowered.asm.mixin.injection.Inject(method="renderLevel",at=@At("HEAD"))
+    private void celestialNail$debugFrame(org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        com.nstut.celestialnail.client.CelestialNailRenderDebug.frame();
+    }
+
     @Redirect(method="renderLevel",at=@At(value="INVOKE",
             target="Lnet/minecraft/world/entity/Entity;blockPosition()Lnet/minecraft/core/BlockPos;"))
     private BlockPos celestialNail$captureEntity(Entity entity) {

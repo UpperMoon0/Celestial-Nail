@@ -24,15 +24,24 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
     }
     @Override
     public boolean shouldRender(CelestialNailEntity entity, Frustum frustum, double x, double y, double z) {
-        return entity.shouldRender(x, y, z) && frustum.isVisible(entity.visualBounds());
+        boolean distance = entity.shouldRender(x, y, z);
+        boolean visible = frustum.isVisible(entity.visualBounds());
+        CelestialNailRenderDebug.visibility(distance, visible);
+        return CelestialNailRenderDebug.forceVisible() || (distance && visible);
     }
     @Override
     public void render(CelestialNailEntity nail, float entityYaw, float partialTick, PoseStack pose, MultiBufferSource buffers, int packedLight) {
+        if (RenderRegressionHooks.fixture(nail.nailId())) {
+            if (RenderRegressionHooks.hideNail) return;
+            RenderRegressionHooks.renders++;
+        }
         float age=nail.summonAge(partialTick), launchAge=nail.launchAge(partialTick), height=nail.nailHeight();
         float portalOffset=(float)(nail.portalY()-net.minecraft.util.Mth.lerp(partialTick,nail.yo,nail.getY()));
         boolean launched=nail.isLaunched(), impact=nail.isImpacting();
-        int light=packedLight;
+        int light=LightTexture.FULL_BRIGHT; // The Nail is self-lit; its buried anchor must not darken the body.
         float visibility=CelestialNailAtmosphere.visibility(nail.getX(),nail.getZ()), impactAge=nail.impactAge(partialTick), crumbleAge=nail.crumbleAge(partialTick), impactOffset=(float)(nail.impactOrigin().y-net.minecraft.util.Mth.lerp(partialTick,nail.yo,nail.getY()));
+        if (CelestialNailRenderDebug.disableDistanceFade()) visibility = 1;
+        CelestialNailRenderDebug.render(nail, age, visibility, portalOffset, packedLight);
         float bodyImpactAge=impactAge<0?-1:Math.max(0,impactAge-Math.max(0,crumbleAge));
         float open=CelestialNailVisuals.opening(age, launchAge)*(crumbleAge<0?1:1-CelestialNailVisuals.smooth(crumbleAge/15));
         float emergence=CelestialNailVisuals.emergence(age);
@@ -145,6 +154,8 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
     }
     private static void vertex(PoseStack.Pose pose, VertexConsumer out, CelestialNailMesh.Face face,
                                CelestialNailMesh.Point point, float s, float t, int light, float alpha, float age) {
+        CelestialNailRenderDebug.vertex(alpha);
+        if (RenderRegressionHooks.ACTIVE) RenderRegressionHooks.vertices++;
         var surface=NailSurface.sample(face,point,s,t,alpha,age);
         var normal=face.normal();
         // Match ModelPart/vanilla entities: lightmap, overlay and pose-transformed normal are real attributes.

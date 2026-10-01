@@ -1,0 +1,59 @@
+diff --git a/.github/workflows/validate.yml b/.github/workflows/validate.yml
+index 4ea4a0a..2b53290 100644
+--- a/.github/workflows/validate.yml
++++ b/.github/workflows/validate.yml
+@@ -24,6 +24,54 @@ jobs:
+       - uses: gradle/actions/setup-gradle@v4
+       - run: chmod +x gradlew
+       - run: ./gradlew :common:test --stacktrace --no-daemon
++      - uses: actions/setup-python@v5
++        with:
++          python-version: '3.13'
++      - name: Render regression log-validator tests
++        run: python -m unittest discover -s tools -p 'test_*render*.py'
++
++  live-render-1201:
++    name: Live Oculus final-image regressions (Mesa)
++    runs-on: ubuntu-24.04
++    timeout-minutes: 25
++    steps:
++      - uses: actions/checkout@v4
++      - uses: actions/setup-java@v4
++        with:
++          distribution: temurin
++          java-version: '21'
++      - uses: actions/setup-python@v5
++        with:
++          python-version: '3.13'
++      - uses: gradle/actions/setup-gradle@v4
++      - run: chmod +x gradlew
++      - name: Check out Perfomant Boom API dependency
++        uses: actions/checkout@v4
++        with:
++          repository: UpperMoon0/Perfomant-Boom
++          ref: ${{ vars.PERFOMANT_BOOM_REF || 'main' }}
++          path: .dependencies/perfomant-boom
++          persist-credentials: false
++      - name: Build matching Perfomant Boom artifacts
++        working-directory: .dependencies/perfomant-boom
++        run: bash gradlew :common:publishToMavenLocal :fabric:publishToMavenLocal :forge:publishToMavenLocal --no-daemon --max-workers=2
++      - name: Install virtual display and OpenGL runtime
++        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libopenal1
++      - name: Run actual Minecraft client and compare final images
++        env:
++          LIBGL_ALWAYS_SOFTWARE: '1'
++          ALSOFT_DRIVERS: 'null'
++        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/run_render_regression.py
++      - name: Upload live render evidence
++        if: always()
++        uses: actions/upload-artifact@v4
++        with:
++          name: forge-1.20.1-live-render-evidence
++          path: |
++            forge-1.20.1/run/render-regression/render-test-results.json
++            forge-1.20.1/run/render-regression/render-test-evidence/
++            forge-1.20.1/run/render-regression/logs/
++          if-no-files-found: error
+ 
+   build-1201:
+     name: Build Minecraft 1.20.1

@@ -15,6 +15,16 @@ loom {
                 server()
                 runDir("run/server")
             }
+            renderRegression {
+                client()
+                vmArg "-Dmixin.env.disableRefMap=true"
+                vmArg "-Dcelestial_nail.renderRegression=true"
+                runDir("run/render-regression")
+                programArg "--width"
+                programArg "854"
+                programArg "--height"
+                programArg "480"
+            }
         }
     }
 }
@@ -43,6 +53,11 @@ dependencies {
     forge "net.minecraftforge:forge:$forge_version"
     modImplementation "dev.architectury:architectury-forge:$architectury_api_version"
 
+    // Optional local shader mods are remapped for development and kept out of releases.
+    modLocalRuntime fileTree(dir: rootProject.file('.dependencies/shaders'), include: ['*.jar'])
+    // Loom does not expose Oculus's nested shader preprocessor on the dev classpath.
+    forgeRuntimeLibrary fileTree(dir: rootProject.file('.dependencies/shader-libraries'), include: ['*.jar'])
+
     common(project(path: ':common-1.20.1', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common-1.20.1', configuration: 'transformProductionForge')
 }
@@ -66,3 +81,45 @@ remapJar {
 loom { forge { mixinConfig "celestial_nail.client.mixins.json" } }
 
 dependencies { modImplementation "com.nstut:perfomant_boom-forge:${rootProject.boom_version}" }
+
+// The real client harness is isolated from production source sets and release jars.
+sourceSets {
+    renderTest {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+}
+def renderTestJar = tasks.register('renderTestJar', Jar) {
+    from sourceSets.renderTest.output
+    archiveClassifier = 'render-tests'
+    manifest { attributes 'FMLModType': 'MOD' }
+}
+if (gradle.startParameter.taskNames.any { it.endsWith('runRenderRegression') }) {
+    dependencies { localRuntime files(renderTestJar) }
+}
+tasks.named('runRenderRegression') {
+    dependsOn renderTestJar
+    timeout = java.time.Duration.ofMinutes(15)
+    doFirst {
+        def target = file('run/render-regression')
+        def pack = file('run/client/shaderpacks/ComplementaryReimagined_r5.9.3.zip')
+        if (!pack.exists() || !rootProject.file('.dependencies/shaders/oculus-mc1.20.1-1.8.0.jar').exists()
+                || !rootProject.file('.dependencies/shaders/embeddium-0.3.31+mc1.20.1.jar').exists()
+                || !rootProject.file('.dependencies/shader-libraries/jcpp-1.4.14.jar').exists()) {
+            throw new GradleException('Live render regression requires the pinned Oculus, Embeddium, jcpp and Complementary dev artifacts.')
+        }
+        copy { from pack; into new File(target, 'shaderpacks') }
+        new File(target, 'config').mkdirs()
+        new File(target, 'config/oculus.properties').text = 'shaderPack=ComplementaryReimagined_r5.9.3.zip\nenableShaders=true\n'
+        new File(target, 'config/embeddium-mixins.properties').text = 'mixin.features.render.gui.debug=false\nmixin.features.render.immediate.buffer_builder.fast_delegate=false\nmixin.features.gui.hooks.settings=false\n'
+        new File(target, 'config/celestial_nail-render-debug.properties').text = 'enabled=true\nlogIntervalSeconds=5\npixelProbe=false\nrequireVisibleDraw=false\nforceVisible=false\ndisableDistanceFade=false\n'
+        new File(target, 'render-test-results.json').delete()
+    }
+    doLast {
+        def report = file('run/render-regression/render-test-results.json')
+        if (!report.exists()) throw new GradleException('Live renderer exited without a regression report.')
+        def results = new groovy.json.JsonSlurper().parse(report)
+        if (!results.complete || results.failures != 0)
+            throw new GradleException("Live render regression failed: ${results.failures} failures. See ${report}")
+    }
+}
