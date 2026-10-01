@@ -110,7 +110,7 @@ The full-impact suspicious-sand, suspicious-gravel and dry-coral regressions fai
 
 ## Shared terrain dependency
 
-Publish the matching Perfomant Boom 1.1.0 artifacts to Maven local before these checks.
+Publish the matching Perfomant Boom 1.1.3 artifacts to Maven local before these checks.
 All terrain mutation tests now exercise Boom's external API and mixins. The three passes
 and cursors no longer live in Nail; the entity keeps its existing persisted cursor fields.
 When iterating on Boom at the same version, refresh Nail's dependency cache with

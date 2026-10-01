@@ -63,7 +63,7 @@ Terrain work is spread across server ticks through **Perfomant Boom**. Large str
 
 ## Installation
 
-Install **Celestial Nail** and **Perfomant Boom 1.1.0 or newer within the 1.x series** for the same Minecraft version and loader on both the server and every connecting client. For a local world, install both in your client instance.
+Install **Celestial Nail** and **Perfomant Boom 1.1.3 or newer within the 1.x series** for the same Minecraft version and loader on both the server and every connecting client. For a local world, install both in your client instance.
 
 | Minecraft | Loader | Other required mods | Java |
 | --- | --- | --- | --- |

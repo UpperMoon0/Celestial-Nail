@@ -33,6 +33,6 @@ side = "BOTH"
 [[dependencies.celestial_nail]]
 modId = "perfomant_boom"
 mandatory = true
-versionRange = "[1.1.0,2.0.0)"
+versionRange = "[1.1.3,2.0.0)"
 ordering = "AFTER"
 side = "BOTH"
