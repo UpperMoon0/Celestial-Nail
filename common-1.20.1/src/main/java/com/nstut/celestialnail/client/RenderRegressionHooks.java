@@ -7,10 +7,11 @@ public final class RenderRegressionHooks {
         void tick();
         void beforeFrame();
         void afterFrame();
+        default void worldRendered() {}
     }
     private static Driver driver;
     public static boolean hideNail;
-    public static long renders, vertices, applies, wrongPrograms, blendDisabled, colorWritesDisabled;
+    public static long renders, vertices, applies, wrongPrograms, blendDisabled, colorWritesDisabled, bodyDraws, bodyDepthDisabled;
     private RenderRegressionHooks() {}
 
     public static boolean fixture(String id) { return ACTIVE && id.startsWith("render_fixture_"); }
@@ -28,9 +29,14 @@ public final class RenderRegressionHooks {
     }
     public static void beforeFrame() { if (driver != null) driver.beforeFrame(); }
     public static void afterFrame() { if (driver != null) driver.afterFrame(); }
+    public static void worldRendered() { if (driver != null) driver.worldRendered(); }
     public static void shaderApplied(net.minecraft.client.renderer.ShaderInstance shader) {
         if (!ACTIVE) return;
         applies++;
+        if (!shader.getName().contains("eyes") && !shader.getName().contains("emissive")) {
+            bodyDraws++;
+            if (!org.lwjgl.opengl.GL11.glGetBoolean(org.lwjgl.opengl.GL11.GL_DEPTH_WRITEMASK)) bodyDepthDisabled++;
+        }
         if (org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL20.GL_CURRENT_PROGRAM) != shader.getId()) wrongPrograms++;
         if (!org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_BLEND)) blendDisabled++;
         int[] mask = colorWriteMask();

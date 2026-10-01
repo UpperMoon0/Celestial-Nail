@@ -15,8 +15,8 @@ packets. It never opens the ordinary development world's saves. The test helper 
 and its resources are packaged only into a separate render-test JAR, not release JARs.
 Each run keeps its world and evidence; no existing worlds are deleted.
 
-Forty live cases cover both shader-disabled and confirmed Complementary-enabled
-pipelines: near/far idle, close/inside/underside hover views, dark pinned state, minimum/maximum scale, portal opening, emergence, descent,
+Forty-two live cases cover both shader-disabled and confirmed Complementary-enabled
+pipelines: near/far idle, close/inside/underside hover views, dark pinned state, cloud overlap, minimum/maximum scale, portal opening, emergence, descent,
 impact, a large embedded body with a buried anchor, and crumble. Six controls in
 each mode cover offscreen/out-of-range geometry, deliberately suppressed draws,
 lost client tracking, a real opaque terrain wall, and a deliberate final-composite loss after successful real
@@ -59,17 +59,35 @@ Do not weaken the final-image, color-mask, blend or terrain-occlusion assertions
 make a draw-counter-only result pass.
 
 The original custom-shader baseline failed all ten Complementary final-image and
-color-write checks. A local NVIDIA GeForce GTX 1050 Ti run then passed 32 cases
-with a post-composition workaround. Release 0.1.3 instead retains the newer 0.1.2
-vanilla renderer from main and revalidates the same matrix against that renderer.
+color-write checks. The current matrix verifies the normal body pipeline and final
+images; a minimum-brightness or draw-counter-only result is not sufficient.
 The Mesa CI job is supplied as a patch because the current GitHub token cannot
 update workflow files; it has not run. Apply it with `git apply tools/ci/live-render-workflow.patch`
 using credentials with workflow permission. Local NVIDIA validation is independent.
 
-The final 0.1.3 NVIDIA run passed all 40 cases with zero failures, including the
-close hover views and nighttime buried-anchor brightness threshold. All five
-production builds, 30 shared tests, 26 server runtime tests and eight Python
-validator tests passed. The release JAR excludes the render-test helper mod.
+Fixture CLOCK is 100000, greater than every age. Idle states use launch/impact/
+crumble sentinels only when those events have not happened. All post-launch states
+have valid LaunchTime values; impact and embedded states have valid ImpactTime.
+Every tracked case records and checks actual summon, launch, impact and crumble
+ages against the scene before accepting an image. Older reports lacking these
+fields cannot pass the report validator.
+
+The idle-near, dark pinned and cloud-overlap cases reject more than 15% clipped-white
+changed pixels. The previously all-emissive Complementary idle image clipped about
+40%, which this check rejects. Main body draws must write depth. The cloud-overlap
+fixture enables vanilla clouds, keeps Complementary clouds active, and requires
+at least 500 changed Nail pixels with newly nearer depth where the hidden reference
+contains white or blue-tinted clouds. World depth is sampled after world composition before
+the hand/HUD depth clear; color is still sampled from the final GameRenderer image.
+Depth readback checks GL errors and restores read-framebuffer and pixel-pack state.
+
+The corrected matrix passed all 42 cases on the local NVIDIA GTX 1050 Ti with
+Oculus 1.8.0 and Complementary r5.9.3. Cloud-backed nearer-depth pixels numbered
+1570 in vanilla and 927 in Complementary. Embedded fixtures confirmed summon age
+2300, launch age 2045, impact age 2000 and no crumble. Ten Python tests passed;
+all five production targets built and the 30 shared tests remained passing.
+The 26 server runtime tests passed in the preceding validation; server behavior
+was unchanged by this rendering and fixture correction. Mesa CI remains unrun.
 
 ### Upstream source reference
 
@@ -94,8 +112,10 @@ established shader compatibility.
 
 Production retains the 0.1.2 vanilla entity/emissive pipeline integration and complete entity
 vertex format, allowing Oculus to replace its shaders and bind its world pipeline
-framebuffers. The body now uses the emissive entity pass and full-bright light coordinates,
-so anchor illumination does not darken it. The custom-shader post-composition workaround is retired. Diagnostics
+framebuffers. The body uses the normal translucent entity pass with depth writes and full-bright
+light coordinates. Animated effects use the emissive pass; the whole body must not
+be classified as glowing eyes. This retains stable anchor-independent lighting
+without flooding Complementary bloom or losing cloud depth. The custom-shader post-composition workaround is retired. Diagnostics
 identify Nail draws by its unique texture, rather than a custom shader name, so
 Oculus replacement shaders are included. Shadow draws are excluded from the main
 color-write assertions because their depth-only output is intentional.

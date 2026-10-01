@@ -37,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
 /** Actual integrated-server tracking, production renderer, Oculus, and final-composite RGB. */
 public final class LiveRenderRegression implements RenderRegressionHooks.Driver {
     private static final Logger LOG = LogUtils.getLogger();
-    private static final long CLOCK = 1000;
+    private static final long CLOCK = 100000;
     private record Scene(String name, float scale, byte phase, float age, float impactAge,
                          float crumbleAge, double distance, double tipY, String fault) {}
     private record Diff(int changed, long energy, int pixels) {}
@@ -51,6 +51,7 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
             new Scene("idle-inside", 1, (byte)0, 300, -1, -1, 1, 128, "none"),
             new Scene("idle-underneath", 1, (byte)0, 300, -1, -1, 3, 128, "none"),
             new Scene("embedded-dark", 1, (byte)3, 2300, 2000, -1, 40, -96, "none"),
+            new Scene("cloud-overlap", 1, (byte)0, 300, -1, -1, 40, 128, "none"),
             new Scene("idle-far", 1, (byte)0, 300, -1, -1, 150, 128, "none"),
             new Scene("minimum-scale", .1F, (byte)0, 300, -1, -1, 12, 128, "none"),
             new Scene("maximum-scale", 4, (byte)0, 300, -1, -1, 150, 32, "none"),
@@ -72,7 +73,8 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
     private Scene scene;
     private CompletableFuture<Void> setup;
     private NativeImage hiddenA, hiddenB;
-    private long startRenders, startVertices, startApplies, startWrong, startBlend, startColor;
+    private long startRenders, startVertices, startApplies, startWrong, startBlend, startColor, startBody, startBodyDepth;
+    private float[] hiddenDepth, frameDepth;
     private double cameraY;
     private float pitch, yaw;
 
@@ -128,9 +130,20 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
             throw new IllegalStateException("Complementary pack not active");
     }
 
+    private float expectedLaunchAge() {
+        if (scene.phase == 0) return -1;
+        return 45 + Math.max(0, scene.impactAge) + Math.max(0, scene.crumbleAge);
+    }
+    private static long timestamp(float age) {
+        if (age == -1) return -1;
+        if (age < 0 || age >= CLOCK) throw new IllegalArgumentException("Invalid fixture age " + age);
+        return CLOCK - (long) age;
+    }
+
     private void startScene() throws Exception {
         if (index >= scenes.size() * 2) { finish(); return; }
         scene = scenes.get(index % scenes.size());
+        mc.options.cloudStatus().set(scene.name.equals("cloud-overlap") ? CloudStatus.FANCY : CloudStatus.OFF);
         boolean nextShaders = index >= scenes.size();
         if (index == 0 || shaders != nextShaders) { setShaderMode(nextShaders); shaders = nextShaders; }
         setupStarted = true;
@@ -142,7 +155,7 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         if (scene.name.equals("emerging")) target = scene.tipY + (CelestialNailVisuals.portalHeight(height)
                 + CelestialNailVisuals.emergenceOffset(CelestialNailVisuals.portalHeight(height), scene.age)) * .5;
         cameraY = target + (scene.name.equals("portal-opening") ? height * .4 : 0);
-        if (scene.name.equals("idle-underneath")) cameraY = scene.tipY - 60;
+        if (scene.name.equals("idle-underneath") || scene.name.equals("cloud-overlap")) cameraY = scene.tipY - 60;
         pitch = (float) Math.toDegrees(Math.atan2(cameraY - target, scene.distance));
         yaw = scene.fault.equals("offscreen") ? 180 : 0;
         var server = mc.getSingleplayerServer();
@@ -176,10 +189,10 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
             CompoundTag tag = new CompoundTag();
             nail.saveWithoutId(tag);
             tag.putByte("Phase", scene.phase);
-            tag.putLong("SummonTime", CLOCK - (long) scene.age);
-            tag.putLong("LaunchTime", scene.phase == 1 ? CLOCK - 45 : -1);
-            tag.putLong("ImpactTime", scene.impactAge < 0 ? -1 : CLOCK - (long) scene.impactAge);
-            tag.putLong("CrumbleTime", scene.crumbleAge < 0 ? -1 : CLOCK - (long) scene.crumbleAge);
+            tag.putLong("SummonTime", timestamp(scene.age));
+            tag.putLong("LaunchTime", timestamp(expectedLaunchAge()));
+            tag.putLong("ImpactTime", timestamp(scene.impactAge));
+            tag.putLong("CrumbleTime", timestamp(scene.crumbleAge));
             tag.putFloat("ImpactYExact", (float) scene.tipY + (scene.impactAge < 0 ? 0
                     : CataclysmTimeline.pierceDepth(4, height, scene.impactAge)));
             tag.putBoolean("BlastCleared", true);
@@ -223,6 +236,7 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
                 stage = 1;
             } else if (stage == 1) {
                 hiddenB = Screenshot.takeScreenshot(mc.getMainRenderTarget());
+                hiddenDepth = scene.name.equals("cloud-overlap") ? frameDepth : null;
                 RenderRegressionHooks.hideNail = scene.fault.equals("suppress");
                 startRenders = RenderRegressionHooks.renders;
                 startVertices = RenderRegressionHooks.vertices;
@@ -230,6 +244,8 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
                 startWrong = RenderRegressionHooks.wrongPrograms;
                 startBlend = RenderRegressionHooks.blendDisabled;
                 startColor = RenderRegressionHooks.colorWritesDisabled;
+                startBody = RenderRegressionHooks.bodyDraws;
+                startBodyDepth = RenderRegressionHooks.bodyDepthDisabled;
                 stage = 2;
             } else {
                 if (scene.fault.equals("erase-composite")) {
@@ -279,6 +295,72 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         return count==0?0:sum/(3.0*count);
     }
 
+    private static boolean changedRgb(int a,int b) {
+        for(int c=0;c<3;c++) if(Math.abs(((a>>(8*c))&255)-((b>>(8*c))&255))>8)return true;
+        return false;
+    }
+    private double clippedWhiteFraction(NativeImage reference, NativeImage visible) {
+        int changed=0, white=0;
+        for(int y=visible.getHeight()/6;y<visible.getHeight()*5/6;y++)
+            for(int x=visible.getWidth()/3;x<visible.getWidth()*2/3;x++) {
+                int b=visible.getPixelRGBA(x,y);
+                if(!changedRgb(reference.getPixelRGBA(x,y),b))continue;
+                changed++;
+                if((b&255)>=245 && ((b>>8)&255)>=245 && ((b>>16)&255)>=245)white++;
+            }
+        return changed==0?0:white/(double)changed;
+    }
+    @Override public void worldRendered() {
+        // World depth is cleared for hands/HUD; sample before that clear. Color remains final-frame evidence.
+        if (!done && setupStarted && scene.name.equals("cloud-overlap") && stage > 0 && waited == 44)
+            frameDepth = captureDepth();
+    }
+    private float[] captureDepth() {
+        var target=mc.getMainRenderTarget();
+        int framebuffer=org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int pack=org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER_BINDING);
+        int[] keys={org.lwjgl.opengl.GL11.GL_PACK_ALIGNMENT,org.lwjgl.opengl.GL11.GL_PACK_ROW_LENGTH,
+                org.lwjgl.opengl.GL11.GL_PACK_SKIP_ROWS,org.lwjgl.opengl.GL11.GL_PACK_SKIP_PIXELS};
+        int[] old=new int[keys.length];
+        var buffer=org.lwjgl.system.MemoryUtil.memAllocFloat(target.width*target.height);
+        try {
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER,target.frameBufferId);
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER,0);
+            for(int i=0;i<keys.length;i++) {
+                old[i]=org.lwjgl.opengl.GL11.glGetInteger(keys[i]);
+                org.lwjgl.opengl.GL11.glPixelStorei(keys[i],i==0?1:0);
+            }
+            org.lwjgl.opengl.GL11.glReadPixels(0,0,target.width,target.height,
+                    org.lwjgl.opengl.GL11.GL_DEPTH_COMPONENT,org.lwjgl.opengl.GL11.GL_FLOAT,buffer);
+            float[] result=new float[buffer.remaining()];buffer.get(result);
+            float min=1,max=0;int finite=0;
+            for(float depth:result)if(Float.isFinite(depth)){min=Math.min(min,depth);max=Math.max(max,depth);finite++;}
+            int error=org.lwjgl.opengl.GL11.glGetError();
+            if(error!=0 || finite!=result.length)throw new IllegalStateException("Invalid world depth readback: "+error);
+            LOG.info("[NailLiveTest] worldDepth stage={} min={} max={} finite={}",stage,min,max,finite);
+            return result;
+        } finally {
+            for(int i=0;i<keys.length;i++)org.lwjgl.opengl.GL11.glPixelStorei(keys[i],old[i]);
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER,pack);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER,framebuffer);
+            org.lwjgl.system.MemoryUtil.memFree(buffer);
+        }
+    }
+    private int changedDepthPixels(NativeImage reference,NativeImage visible,float[] hidden,float[] drawn) {
+        if (hidden == null || drawn == null) throw new IllegalStateException("Missing world depth capture");
+        int count=0;
+        for(int y=visible.getHeight()/6;y<visible.getHeight()*5/6;y++)
+            for(int x=visible.getWidth()/3;x<visible.getWidth()*2/3;x++) {
+                int i=(visible.getHeight()-1-y)*visible.getWidth()+x;
+                int a=reference.getPixelRGBA(x,y);
+                int red=a&255, green=(a>>8)&255, blue=(a>>16)&255;
+                // Require clouds behind the visible Nail, not a fixture with only clear sky.
+                boolean cloud=Math.min(red,Math.min(green,blue))>=140
+                        && Math.max(red,Math.max(green,blue))-Math.min(red,Math.min(green,blue))<(shaders?35:70);
+                if(cloud && changedRgb(a,visible.getPixelRGBA(x,y)) && drawn[i]+.00001F<hidden[i])count++;
+            }
+        return count;
+    }
     private void evaluate(NativeImage visible) throws Exception {
         Class<?> apiType = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
         Object api = apiType.getMethod("getInstance").invoke(null);
@@ -290,6 +372,8 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         long wrong = RenderRegressionHooks.wrongPrograms - startWrong;
         long blend = RenderRegressionHooks.blendDisabled - startBlend;
         long color = RenderRegressionHooks.colorWritesDisabled - startColor;
+        long body = RenderRegressionHooks.bodyDraws - startBody;
+        long depthDisabled = RenderRegressionHooks.bodyDepthDisabled - startBodyDepth;
         boolean visiblePixels = signal.changed > Math.max(40, noise.changed * 3)
                 && signal.energy > Math.max(2000, noise.energy * 3);
         double brightness=changedPixelBrightness(hiddenB, visible);
@@ -305,17 +389,30 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
             if (blend > 0) violations.add("BLENDING_DISABLED");
             if (color > 0) violations.add("COLOR_WRITES_DISABLED");
             if (!visiblePixels) violations.add("FINAL_IMAGE_MISSING");
+            if (scene.age >= CelestialNailVisuals.OPEN_TICKS && (body == 0 || depthDisabled > 0)) violations.add("BODY_DEPTH_MISSING");
             if (scene.name.equals("embedded-dark") && brightness < 100) violations.add("DARK_BODY");
         } else {
             if (visiblePixels) violations.add("CONTROL_FALSE_POSITIVE");
             if ((scene.fault.equals("erase-composite") || scene.fault.equals("occluded")) && (renders == 0 || vertices == 0 || applies == 0)) violations.add("CONTROL_NOT_DRAWN");
             if (scene.fault.equals("untrack") && tracked) violations.add("CONTROL_STILL_TRACKED");
         }
+        Map<String,Object> lifecycle = new java.util.LinkedHashMap<>();
         if (tracked && mc.level.getEntity(entityId) instanceof CelestialNailEntity nail) {
-            if (Math.abs(nail.nailScale() - scene.scale) > .0001 || Math.abs(nail.summonAge(0) - scene.age) > .01
-                    || nail.isCrumbling() != (scene.phase == 4) || nail.isImpacting() != (scene.phase == 2 || scene.phase == 3))
+            lifecycle.put("summonAge", nail.summonAge(0)); lifecycle.put("launchAge", nail.launchAge(0));
+            lifecycle.put("impactAge", nail.impactAge(0)); lifecycle.put("crumbleAge", nail.crumbleAge(0));
+            lifecycle.put("expectedSummonAge", scene.age); lifecycle.put("expectedLaunchAge", expectedLaunchAge());
+            lifecycle.put("expectedImpactAge", scene.impactAge); lifecycle.put("expectedCrumbleAge", scene.crumbleAge);
+            if (Math.abs(nail.nailScale()-scene.scale)>.0001 || Math.abs(nail.summonAge(0)-scene.age)>.01
+                    || Math.abs(nail.launchAge(0)-expectedLaunchAge())>.01 || Math.abs(nail.impactAge(0)-scene.impactAge)>.01
+                    || Math.abs(nail.crumbleAge(0)-scene.crumbleAge)>.01 || nail.isLaunched()!=(scene.phase!=0)
+                    || nail.isCrumbling()!=(scene.phase==4) || nail.isImpacting()!=(scene.phase==2 || scene.phase==3))
                 violations.add("FIXTURE_STATE_MISMATCH");
         }
+        double whiteFraction = clippedWhiteFraction(hiddenB, visible);
+        boolean checkSurface = scene.name.equals("idle-near") || scene.name.equals("embedded-dark") || scene.name.equals("cloud-overlap");
+        if (checkSurface && whiteFraction > .15) violations.add("BODY_OVEREXPOSED");
+        int cloudDepthPixels = scene.name.equals("cloud-overlap") ? changedDepthPixels(hiddenB, visible, hiddenDepth, frameDepth) : -1;
+        if (scene.name.equals("cloud-overlap") && cloudDepthPixels < 500) violations.add("CLOUD_BODY_DEPTH_MISSING");
         if (activeShaders != shaders) violations.add("WRONG_SHADER_MODE");
         boolean passed = violations.isEmpty();
         if (!passed) failures++;
@@ -325,6 +422,8 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("case", name); result.put("passed", passed); result.put("expectedVisible", expectedVisible);
         result.put("shaderPackInUse", activeShaders);
+        result.put("lifecycle", lifecycle); result.put("bodyDraws", body); result.put("bodyDepthDisabled", depthDisabled);
+        result.put("clippedWhiteFraction", whiteFraction); result.put("cloudDepthPixels", cloudDepthPixels);
         result.put("violations", violations);
         result.put("visiblePixels", visiblePixels); result.put("tracked", tracked); result.put("renders", renders);
         result.put("vertices", vertices); result.put("shaderApplies", applies); result.put("wrongPrograms", wrong);

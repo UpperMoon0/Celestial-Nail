@@ -55,9 +55,9 @@ def prepare():
 
 def validate_report(report):
     cases = report.get("cases", [])
-    if report.get("complete") is not True or len(cases) != report.get("expectedCases") or len(cases) != 40:
+    if report.get("complete") is not True or len(cases) != report.get("expectedCases") or len(cases) != 42:
         raise ValueError("Live fixture incomplete; every scene and both shader modes are required")
-    names = {"idle-near", "idle-close", "idle-inside", "idle-underneath", "embedded-dark", "idle-far", "minimum-scale", "maximum-scale", "portal-opening", "emerging",
+    names = {"idle-near", "idle-close", "idle-inside", "idle-underneath", "embedded-dark", "cloud-overlap", "idle-far", "minimum-scale", "maximum-scale", "portal-opening", "emerging",
              "descending", "impact", "embedded-buried-anchor", "crumbling", "terrain-occluded-control", "offscreen-control",
              "outside-fade-control", "missing-draw-control", "lost-final-composite-control", "missing-tracking-control"}
     expected = {mode + "-" + name for mode in ("vanilla", "complementary") for name in names}
@@ -84,6 +84,30 @@ def validate_report(report):
                 raise ValueError("Visible fixture lacks real draw evidence")
             if case.get("wrongPrograms") != 0 or case.get("blendDisabled") != 0 or case.get("colorWritesDisabled") != 0:
                 raise ValueError("Unexpected shader program, color-write mask or blend state")
+        if case.get("tracked"):
+            ages=case.get("lifecycle",{})
+            for phase in ("summon", "launch", "impact", "crumble"):
+                actual=ages.get(phase+"Age")
+                expected=ages.get("expected"+phase.title()+"Age")
+                if actual is None or expected is None or abs(actual-expected)>.01:
+                    raise ValueError("Incorrect lifecycle clock in "+case["case"])
+            if ages["summonAge"]<0:
+                raise ValueError("Fixture used a missing summon clock")
+            name=case["case"].split("-",1)[1]
+            if name=="crumbling" and ages["crumbleAge"]<0:
+                raise ValueError("Crumble fixture used a missing crumble clock")
+            if name in ("descending","impact","embedded-dark","embedded-buried-anchor","crumbling") and ages["launchAge"]<0:
+                raise ValueError("Post-launch fixture left its portal open")
+            if name in ("impact","embedded-dark","embedded-buried-anchor") and ages["impactAge"]<0:
+                raise ValueError("Impact fixture used a missing-impact sentinel")
+        if not control and not case["case"].endswith("portal-opening"):
+            if case.get("bodyDraws",0)<=0 or case.get("bodyDepthDisabled")!=0:
+                raise ValueError("Body did not render with depth writes")
+        if case["case"].endswith(("idle-near","embedded-dark","cloud-overlap")):
+            if not 0<=case.get("clippedWhiteFraction",1)<=.15:
+                raise ValueError("Body was overexposed")
+        if case["case"].endswith("cloud-overlap") and case.get("cloudDepthPixels",0)<500:
+            raise ValueError("Cloud-overlap fixture lacks final body depth")
         if case["case"].endswith("embedded-dark") and case.get("meanVisibleBrightness", 0) < 100:
             raise ValueError("Pinned Nail is dark in the zero-light nighttime fixture")
     return cases

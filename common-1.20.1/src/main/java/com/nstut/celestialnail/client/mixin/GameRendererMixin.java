@@ -5,6 +5,9 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.*;
 @Mixin(net.minecraft.client.renderer.GameRenderer.class)
 public abstract class GameRendererMixin {
+ @Inject(method="renderLevel",at=@At(value="INVOKE",shift=At.Shift.AFTER,
+  target="Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/vertex/PoseStack;FJZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;)V"))
+ private void celestial$testWorldDepth(CallbackInfo ci) {com.nstut.celestialnail.client.RenderRegressionHooks.worldRendered();}
  @ModifyVariable(method="render",at=@At("HEAD"),argsOnly=true,ordinal=0)
  private float celestial$stableTestPartialTick(float partialTick) {
   return com.nstut.celestialnail.client.RenderRegressionHooks.ACTIVE ? 0 : partialTick;
