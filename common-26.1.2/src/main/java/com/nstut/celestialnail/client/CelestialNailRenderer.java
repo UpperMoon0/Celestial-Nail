@@ -48,7 +48,7 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
     public void submit(CelestialNailRenderState state, PoseStack pose, SubmitNodeCollector nodes, CameraRenderState camera) {
         float age=state.summonAge, launchAge=state.launchAge, height=state.height, portalOffset=state.portalOffset;
         boolean launched=state.launched, impact=state.impact;
-        int light=state.lightCoords;
+        int light=LightCoordsUtil.FULL_BRIGHT; // Self-lit even when the impact anchor is buried.
         float visibility=state.visibility, impactAge=state.impactAge, crumbleAge=state.crumbleAge, impactOffset=state.impactOffset;
         float bodyImpactAge=impactAge<0?-1:Math.max(0,impactAge-Math.max(0,crumbleAge));
         float open=CelestialNailVisuals.opening(age, launchAge)*(crumbleAge<0?1:1-CelestialNailVisuals.smooth(crumbleAge/15));

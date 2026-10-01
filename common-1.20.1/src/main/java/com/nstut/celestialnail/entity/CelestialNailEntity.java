@@ -206,6 +206,8 @@ public final class CelestialNailEntity extends Entity {
 
     @Override
     public void tick() {
+        // The dedicated render test samples synchronized lifecycle states without terrain work.
+        if (!level().isClientSide && Boolean.getBoolean("celestial_nail.renderRegression") && nailId().startsWith("render_fixture_")) return;
         if (isRemoved()) return;
         super.tick();
         if (isRemoved()) return;
@@ -231,7 +233,7 @@ public final class CelestialNailEntity extends Entity {
     /** Deep embedding is intentional; only uncontrolled idle/descending nails use void removal. */
     @Override
     protected void onBelowWorld() {
-        if (!isImpacting() && !isCrumbling()) super.onBelowWorld();
+        if (level() instanceof ServerLevel && !isImpacting() && !isCrumbling()) beginCrumbling();
     }
 
     @Override
@@ -256,7 +258,7 @@ public final class CelestialNailEntity extends Entity {
         if (!this.level().isClientSide) {
             ServerLevel server = (ServerLevel) this.level();
             server.sendParticles(ParticleTypes.END_ROD, this.getX(), this.getY() + nailHeight()*.2, this.getZ(), 8, nailHeight()*.025, nailHeight()*.12, nailHeight()*.025, 0.02);
-            if (this.getY() <= server.getMinBuildHeight()) beginImpact(server, BlockPos.containing(this.getX(), server.getMinBuildHeight(), this.getZ()), new Vec3(this.getX(), server.getMinBuildHeight(), this.getZ()));
+            if (this.getY() < server.getMinBuildHeight()) beginCrumbling();
         }
     }
 

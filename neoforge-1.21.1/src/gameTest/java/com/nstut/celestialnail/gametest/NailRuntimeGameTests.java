@@ -56,6 +56,42 @@ public final class NailRuntimeGameTests {
         } finally { if(!previous)level.setChunkForced(chunk.x,chunk.z,false); }
         h.succeed();
     }
+    @GameTest(template="empty",timeoutTicks=100,batch="nail_void")
+    public static void voidDescentCrumblesBeforeRemovalAndReleasesTickets(GameTestHelper h) {
+        var level=h.getLevel();var base=h.absolutePos(new BlockPos(2,2,2));
+        var n=nail(level,new BlockPos(base.getX(),level.getMinBuildHeight()-1,base.getZ()),"void_descent",4);
+        n.beginSummoning(1);
+        var tag=save(n);tag.putByte("Phase",(byte)1);tag.putLong("LaunchTime",level.getGameTime()-30);n.load(tag);
+        var chunk=n.chunkPosition();boolean previous=level.getForcedChunks().contains(chunk.toLong());
+        n.tick();
+        h.assertTrue(n.isCrumbling(),"Void descent must start the remove animation");
+        h.assertFalse(n.isRemoved(),"Void descent discarded the Nail before its animation");
+        h.assertFalse(n.isImpacting(),"Void descent scheduled a bottom-of-world impact");
+        h.assertTrue(n.getDeltaMovement().equals(Vec3.ZERO),"Crumbling Nail kept falling");
+        long started=level.getGameTime();
+        h.runAfterDelay(com.nstut.celestialnail.CelestialNailVisuals.CRUMBLE_TICKS-1,()-> {
+            n.tick();h.assertFalse(n.isRemoved(),"Nail disappeared before crumble completed");
+            h.assertTrue(save(n).getLong("CrumbleTime")==started,"Crumble clock restarted");
+        });
+        h.runAfterDelay(com.nstut.celestialnail.CelestialNailVisuals.CRUMBLE_TICKS,()-> {
+            n.tick();h.assertTrue(n.isRemoved(),"Nail survived completed crumble");
+            h.assertTrue(level.getForcedChunks().contains(chunk.toLong())==previous,"Void removal leaked its chunk ticket");
+            h.succeed();
+        });
+    }
+    @GameTest(template="empty",timeoutTicks=20,batch="nail_void_idle")
+    public static void belowWorldIdleStartsCrumbleAndReloadKeepsItsClock(GameTestHelper h) {
+        var level=h.getLevel();var base=h.absolutePos(new BlockPos(2,2,2));
+        var n=nail(level,new BlockPos(base.getX(),level.getMinBuildHeight()-80,base.getZ()),"void_idle",4);
+        n.beginSummoning(1);
+        try {
+            n.tick();h.assertTrue(n.isCrumbling(),"Below-world idle Nail skipped crumble");
+            h.assertFalse(n.isRemoved(),"Below-world hook immediately discarded the Nail");
+            var tag=save(n);long started=tag.getLong("CrumbleTime");n.load(tag);n.tick();
+            h.assertTrue(n.isCrumbling() && save(n).getLong("CrumbleTime")==started,"Reload restarted or cancelled crumble");
+        } finally {n.discard();}
+        h.succeed();
+    }
     @GameTest(template="empty",timeoutTicks=20,batch="nail_deep")
     public static void deepImpactAndEmbeddedStateSurviveBaseTick(GameTestHelper h) {
         var level=h.getLevel(); BlockPos base=h.absolutePos(new BlockPos(2,2,2));

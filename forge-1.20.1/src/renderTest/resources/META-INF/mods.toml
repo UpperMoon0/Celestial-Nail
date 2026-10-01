@@ -1,0 +1,8 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+[[mods]]
+modId="celestial_nail_render_test"
+version="1.0"
+displayName="Celestial Nail Live Render Regression"
+description="Isolated automated final-image fixture; never distributed with the mod."

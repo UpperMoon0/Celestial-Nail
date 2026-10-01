@@ -31,7 +31,7 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
         float age=nail.summonAge(partialTick), launchAge=nail.launchAge(partialTick), height=nail.nailHeight();
         float portalOffset=(float)(nail.portalY()-net.minecraft.util.Mth.lerp(partialTick,nail.yo,nail.getY()));
         boolean launched=nail.isLaunched(), impact=nail.isImpacting();
-        int light=packedLight;
+        int light=LightTexture.FULL_BRIGHT; // The Nail is self-lit; its buried anchor must not darken the body.
         float visibility=CelestialNailAtmosphere.visibility(nail.getX(),nail.getZ()), impactAge=nail.impactAge(partialTick), crumbleAge=nail.crumbleAge(partialTick), impactOffset=(float)(nail.impactOrigin().y-net.minecraft.util.Mth.lerp(partialTick,nail.yo,nail.getY()));
         float bodyImpactAge=impactAge<0?-1:Math.max(0,impactAge-Math.max(0,crumbleAge));
         float open=CelestialNailVisuals.opening(age, launchAge)*(crumbleAge<0?1:1-CelestialNailVisuals.smooth(crumbleAge/15));

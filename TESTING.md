@@ -1,5 +1,172 @@
 # Verification
 
+## Automated final-image Oculus regression
+
+Run `python tools/run_render_regression.py` with Java 21 selected. This downloads
+and SHA-512 verifies pinned Oculus 1.8.0, Embeddium 0.3.31, Complementary Reimagined
+r5.9.3 and Oculus's jcpp library before launching the actual Forge 1.20.1 client.
+It requires a functioning OpenGL display; it fails rather than skips if the client,
+shader pack, world setup, entity tracking, or image capture cannot run.
+
+The `:forge-1.20.1:runRenderRegression` task runs the isolated `renderTest` source set
+in `forge-1.20.1/run/render-regression`, creates a uniquely named disposable flat
+world, sets up a spectator camera and spawns server-side Nails using real tracking
+packets. It never opens the ordinary development world's saves. The test helper mod
+and its resources are packaged only into a separate render-test JAR, not release JARs.
+Each run keeps its world and evidence; no existing worlds are deleted.
+
+Forty live cases cover both shader-disabled and confirmed Complementary-enabled
+pipelines: near/far idle, close/inside/underside hover views, dark pinned state, minimum/maximum scale, portal opening, emergence, descent,
+impact, a large embedded body with a buried anchor, and crumble. Six controls in
+each mode cover offscreen/out-of-range geometry, deliberately suppressed draws,
+lost client tracking, a real opaque terrain wall, and a deliberate final-composite loss after successful real
+draw calls. The latter control overwrites the captured final color texture with
+the hidden-Nail reference; its assertion must reject visible pixels despite real
+renderer/vertex/shader activity. Draw counters alone cannot pass this test.
+
+The driver samples the **final main render target after GameRenderer and shader-pack
+composition**, not an intermediate draw framebuffer. It compares a body-centered RGB
+region against a hidden-Nail image and measures temporal noise with a second hidden
+image. Fixed animation time, camera, partial tick and cleared random particles keep
+particles/name labels from standing in for Nail geometry. Server-side visual fixture
+states are frozen to prevent terrain work while the production renderer and shader
+code run normally. These are rendering lifecycle-state tests; normal ticking,
+damage/terrain lifecycle and multiplayer timing remain covered by their separate
+server suites, not by this frozen visual fixture.
+
+The nighttime buried-anchor case also requires mean brightness of changed Nail pixels
+at least 100/255; a merely visible dark silhouette cannot pass. The portal-opening
+fixture sits below the cloud layer to avoid testing legitimate cloud occlusion.
+
+Visible cases require tracking, submitted vertices, Nail shader execution, the
+expected GL program, enabled RGB writes, enabled translucent blending and a final-image RGB change
+above both an absolute threshold and measured background noise. Shader mode and
+synchronized scale/phase/animation state are checked. Controls require absence of
+visible pixels; the terrain-occlusion and composite-loss controls must still have real draw activity.
+Missing cases, an incomplete run, or any failed assertion produce a non-zero Gradle
+and wrapper exit. Reports distinguish `FINAL_IMAGE_MISSING` from `BLENDING_DISABLED`
+and other upstream failures.
+
+Results are in `forge-1.20.1/run/render-regression/render-test-results.json` and paired
+`render-test-evidence/*-hidden.png` / `*-visible.png` images. `tools/test_live_render_report.py`
+checks that the result validator cannot accept incomplete matrices, invisible output,
+wrong shader mode, or controls that never exercised their failure. The proposed CI change in `tools/ci/live-render-workflow.patch` adds a
+`live-render-1201` job with Xvfb/Mesa and uploads the report,
+images and logs even on failure. Mesa CI is a separate renderer from a local NVIDIA
+run; this matrix is not a claim of coverage of every GPU, shader pack or MC version.
+
+Do not weaken the final-image, color-mask, blend or terrain-occlusion assertions to
+make a draw-counter-only result pass.
+
+The original custom-shader baseline failed all ten Complementary final-image and
+color-write checks. A local NVIDIA GeForce GTX 1050 Ti run then passed 32 cases
+with a post-composition workaround. Release 0.1.3 instead retains the newer 0.1.2
+vanilla renderer from main and revalidates the same matrix against that renderer.
+The Mesa CI job is supplied as a patch because the current GitHub token cannot
+update workflow files; it has not run. Apply it with `git apply tools/ci/live-render-workflow.patch`
+using credentials with workflow permission. Local NVIDIA validation is independent.
+
+The final 0.1.3 NVIDIA run passed all 40 cases with zero failures, including the
+close hover views and nighttime buried-anchor brightness threshold. All five
+production builds, 30 shared tests, 26 server runtime tests and eight Python
+validator tests passed. The release JAR excludes the render-test helper mod.
+
+### Upstream source reference
+
+Local reference clones live under ignored `.dependencies/shader-reference`:
+Oculus uses branch `1.20.1-new`, commit
+`b3b278134f719afe32ba8b6b5d3a93f052175afc` (declares MC 1.20.1 / Oculus 1.8.0).
+Complementary's repository main is commit
+`c09950df0650b27dac260c1b0f69afc11387aa6f` (r5.9.2); the installed r5.9.3 ZIP is
+separately extracted as `ComplementaryReimagined-r5.9.3`. Do not treat that older
+repository head as the deployed pack. The runner pins the deployed ZIP's SHA-512.
+
+Oculus `MixinShaderInstance.iris$lockDepthColorState` calls
+`DepthColorStorage.disableDepthColor()` for ordinary custom ShaderInstances while
+the world shader pipeline is active. That sets depth writes false and all four
+color-write channels false. The installed Oculus JAR bytecode confirms this hook;
+the former Nail custom ShaderInstance was neither ExtendedShader nor FallbackShader.
+Oculus's ExtendedShader instead binds the pipeline's before/after-translucent
+framebuffers, and FinalPassRenderer replaces the main color target with its final
+composition. Complementary r5.9.3 `shaders/program/final.glsl` reads `colortex3`.
+Simply drawing to the main target or restoring its color mask is therefore not
+established shader compatibility.
+
+Production retains the 0.1.2 vanilla entity/emissive pipeline integration and complete entity
+vertex format, allowing Oculus to replace its shaders and bind its world pipeline
+framebuffers. The body now uses the emissive entity pass and full-bright light coordinates,
+so anchor illumination does not darken it. The custom-shader post-composition workaround is retired. Diagnostics
+identify Nail draws by its unique texture, rather than a custom shader name, so
+Oculus replacement shaders are included. Shadow draws are excluded from the main
+color-write assertions because their depth-only output is intentional.
+
+Diagnostics now run immediately before VertexBuffer.draw, after all shader-apply
+mixins finish. This avoids reporting state before Oculus's apply-tail hook has
+locked the masks. The live report records `colorWritesDisabled` and requires RGB
+writes enabled in visible cases (`COLOR_WRITES_DISABLED` on failure). Final-image
+checks remain independently required.
+
+## Oculus render diagnostics and live regression (1.20.1)
+
+The client creates `config/celestial_nail-render-debug.properties` in its game directory.
+Settings reload every two seconds. Defaults are disabled; this development instance
+has logging enabled. A code change requires a client restart.
+
+```properties
+enabled=true
+logIntervalSeconds=5
+forceVisible=false
+disableDistanceFade=false
+pixelProbe=false
+requireVisibleDraw=false
+```
+
+`[NailRenderDebug]` summaries are global, at most one per interval (clamped to 1–300
+seconds), with bounded samples of four tracked Nails. They include camera and render
+distance, entity coordinates and visual bounds, distance/frustum rejection counts,
+render calls, submitted vertices and alpha range, configured render passes, actual GL
+program and framebuffer, depth/blend/cull state, shader reloads, and Oculus pack state.
+Config-read errors retain the previous settings and warn at most once per 30 seconds.
+Only the first main Nail draw in each interval queries GL state. The snapshot
+is immediately before the actual vertex draw, after shader-apply hooks finish;
+`colorWriteMask` records the four channel masks (1 means enabled).
+
+Use `forceVisible=true` to bypass the renderer's distance/frustum rejection, and
+`disableDistanceFade=true` to bypass its horizontal fade. These controls require
+`enabled=true`; they do not bypass entity tracking, depth testing or shader-pack
+composition. Keep both false for regression validation.
+
+For a live regression, enable Complementary in the Forge 1.20.1 client. Use an empty
+test world, summon a single idle Nail, wait at least 170 game ticks for emergence,
+and keep the stationary camera aimed at its unobstructed body, well inside the chunk
+render distance. Do not launch or remove it during sampling. Set `pixelProbe=true`
+and `requireVisibleDraw=true`, then record at least two summaries. Disable the latter
+before moving the camera or changing scenes.
+
+The probe reads RGB from the first Nail draw's active color target before/after the
+draw. It samples at most once per log interval, in a centered region capped at
+2048×2048 pixels, and restores framebuffer/read-buffer/pixel-pack state. It is opt-in
+because synchronous GPU readback may stall a frame. Alpha-only changes and one-byte
+rounding noise do not pass. Menu frames and pre-emergence scenes remain unarmed.
+
+```powershell
+python tools/check_render_debug.py forge-1.20.1/run/client/logs/latest.log
+```
+
+The checker fails for missing render calls, zero emitted vertices, transparent
+geometry, absent Nail shader applications, a mismatched GL program, or unchanged
+draw-target pixels. It also rejects shader-disabled sessions, visibility overrides,
+missing evidence, and single-interval successes. `DRAW_OBSERVED` remains unverified.
+Use a fresh log dedicated to the fixture; any armed failure fails the run.
+
+`common:test` covers the diagnostic failure classifier, RGB pixel comparison, and
+monotonic rate limiting (including timer wrap and no burst after a stall). CI also
+runs `tools/test_render_debug.py` to prevent invisible-draw logs from passing.
+These deterministic tests do not run Oculus. A successful pixel probe establishes
+the Nail draw target changed; it does **not** establish that Complementary's final
+composite displays those pixels. Compare the final in-game view as well, particularly
+when the Nail draw framebuffer differs from the main framebuffer.
+
 Run Gradle with Java 21. The 26.1.2 module resolves Java 25 for compilation.
 
 ## Shared deterministic tests
@@ -26,7 +193,7 @@ This compiles and packages Fabric/Forge 1.20.1, Fabric/NeoForge 1.21.1 and NeoFo
 ./gradlew :neoforge-1.21.1:runGameTestServer
 ```
 
-This launches a disposable GameTest server in `neoforge-1.21.1/run/runtime-tests`. It never connects to the player's server or existing smoke world. Tests live in an isolated `gameTest` source set and are not shipped in the production jar. The dedicated runtime task exits nonzero when required tests fail. Successful evidence must include **all twenty-four required tests**, not merely a server startup message.
+This launches a disposable GameTest server in `neoforge-1.21.1/run/runtime-tests`. It never connects to the player's server or existing smoke world. Tests live in an isolated `gameTest` source set and are not shipped in the production jar. The dedicated runtime task exits nonzero when required tests fail. Successful evidence must include **all twenty-six required tests**, not merely a server startup message.
 
 The suite exercises:
 
@@ -121,3 +288,12 @@ When iterating on Boom at the same version, refresh Nail's dependency cache with
 The production renderer now uses vanilla `entityTranslucent` and `entityTranslucentEmissive` with complete entity vertices (UV, overlay, lightmap, normal). `NailSurfaceTest` checks real atlas coordinates through the lifecycle, pulse clipping inside long facets, rigid fragment normal rotation and the shockwave annulus. The old offline custom-shader preview remains historical evidence only.
 
 Use a disposable client world. Compare the ivory/metal shell at noon, midnight and beside a torch; rotate the view and observe facet shading. Check emergence, portal, traveling pulse, impact ring and removal with shaders disabled and enabled. Reload resources and toggle the pack repeatedly. Vanilla and pack fog now apply to the nail, so repeat at a height inside the configured fog range before diagnosing visibility. Shader-pack bloom or illumination of nearby blocks is not guaranteed by full-bright entity materials.
+
+## Void removal regression
+
+The server runtime suite includes descending through empty space below minimum
+build height and idle below-world cleanup. Both enter the normal timed crumble
+phase, stop motion, avoid an impact, retain the saved crumble clock, and discard
+only after CRUMBLE_TICKS. The descent test checks forced-chunk cleanup. Existing
+deep-impact/embedded tests continue to protect deliberate below-world embedding.
+The production change is applied to all three Minecraft version adapters.
