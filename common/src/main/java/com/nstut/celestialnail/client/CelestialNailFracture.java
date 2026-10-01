@@ -8,6 +8,10 @@ import static com.nstut.celestialnail.client.CelestialNailMesh.*;
 public final class CelestialNailFracture {
     public record Piece(List<Face> faces, Point pivot, float seed) {}
     public record Motion(Point pivot,float cosY,float sinY,float cosZ,float sinZ,float dx,float dy,float dz,float alpha) {
+        public Point rotateNormal(Point n) {
+            float rx=n.x()*cosY-n.z()*sinY, rz=n.x()*sinY+n.z()*cosY;
+            return new Point(rx*cosZ-n.y()*sinZ,rx*sinZ+n.y()*cosZ,rz);
+        }
         public Point apply(Point p) {
             float x=p.x()-pivot.x(), y=p.y()-pivot.y(), z=p.z()-pivot.z();
             float rx=x*cosY-z*sinY, rz=x*sinY+z*cosY;

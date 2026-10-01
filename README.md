@@ -21,7 +21,7 @@ Terrain work is spread across server ticks through the required Perfomant Boom l
 
 ## Installation
 
-Install Nail and **Perfomant Boom 1.1.0 or newer within the 1.x series** for the same Minecraft version and loader on the server and every participating client. In single-player, install both in your client instance. Boom is a separate dependency, not bundled inside Nail.
+Install Nail and **Perfomant Boom 1.1.3 or newer within the 1.x series** for the same Minecraft version and loader on the server and every participating client. In single-player, install both in your client instance. Boom is a separate dependency, not bundled inside Nail.
 
 | Minecraft | Loader | Additional required mods | Java |
 | --- | --- | --- | --- |
@@ -33,7 +33,7 @@ Install Nail and **Perfomant Boom 1.1.0 or newer within the 1.x series** for the
 
 Fabric Loader must be **0.18.4+**. The NeoForge 1.21.1 artifact requires NeoForge **21.1.228 or newer within 21.1.x** and Minecraft **1.21.1**. Choose runnable JARs, excluding sources/dev JARs, and remove obsolete duplicates when updating. The supported-target matrix does not imply that every artifact is already published.
 
-Nail currently develops and tests against Boom 1.1.0; metadata accepts `>=1.1.0 <2.0.0`. That range does not certify untested future versions. See [compatibility](docs/COMPATIBILITY.md) for full setup and conflict notes.
+Nail currently develops and tests against Boom 1.1.3; metadata accepts `>=1.1.3 <2.0.0`. That range does not certify untested future versions. See [compatibility](docs/COMPATIBILITY.md) for full setup and conflict notes.
 
 ## Quick start
 

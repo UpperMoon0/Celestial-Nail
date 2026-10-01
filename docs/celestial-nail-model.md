@@ -4,7 +4,7 @@ The reference is interpreted as an 72-block-tall Minecraft entity at scale 1. It
 
 The shared, baked mesh includes an octagonal ivory shaft, raised gold arrises, cyan channels, framed diamond clasps, intersecting pointed arches, faceted lancet windows, a stepped crown collar, eight crown windows, and three asymmetric swept petals with inset panels and underside ribs. Three staggered layers of dark stone fragments surround a triangulated cyan crystal heart. Fifteen small crystal shards rotate separately around the point.
 
-The atlas contains five original 16 × 16 pixel material swatches. Stone and metal receive world lighting; crystals and blue seams use full-bright light coordinates. Bloom depends on the player's shaders. Geometry is built once, then shared by all entities and all five loader targets. There are 7,590 quads in the nail including triangles encoded as quads for Minecraft's entity buffer. The renderer expands culling bounds to include the petals and orbiting shards.
+The atlas contains five original 16 × 16 pixel material swatches. Stone and metal use vanilla lightmap coordinates and pose-transformed normals; crystals and blue seams retain full-bright light coordinates. Portal and impact overlays use vanilla translucent emissive rendering. Bloom depends on the player's shaders. Geometry is built once, then shared by all entities and all five loader targets. There are 7,590 quads in the nail including triangles encoded as quads for Minecraft's entity buffer. The renderer expands culling bounds to include the petals and orbiting shards.
 
 ![Offline mesh preview](celestial-nail-model-preview.png)
 
