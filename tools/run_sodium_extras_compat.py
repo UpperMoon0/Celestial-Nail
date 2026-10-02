@@ -80,9 +80,11 @@ def main():
         extras = prepare(COMPAT["extras-" + target])
         installer = mod_loader.get_mod_loader(loader)
         version = installer.get_installed_version(game, TARGETS[target])
-        if not (launcher / "versions" / version / (version + ".json")).exists():
+        receipt = launcher / ("installed-" + target + "-" + TARGETS[target] + ".txt")
+        if not receipt.exists() or not (launcher / "versions" / version / (version + ".json")).exists():
             print("Installing", target, flush=True)
             installer.install(game, launcher, loader_version=TARGETS[target], java=args.java)
+            receipt.write_text(version + "\n")
         if args.prepare_only: continue
         if not args.skip_build:
             subprocess.run([str(ROOT / ("gradlew.bat" if os.name == "nt" else "gradlew")),

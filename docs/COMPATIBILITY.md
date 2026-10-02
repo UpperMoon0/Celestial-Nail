@@ -32,13 +32,19 @@ client hook exempts only `celestial_nail:celestial_nail`; ordinary entities and 
 whitelists retain Extras' behavior, and Nail's own distance/frustum limits still apply.
 No pack configuration is rewritten.
 
-| Nail target | Extras artifact checked | Hook included | Source checked | Packaged runtime and final-image test |
+| Nail target | Extras artifact checked | Hook included | Source checked | Runtime tested |
 | --- | --- | --- | --- | --- |
-| Forge 1.20.1 | Forge 1.0.7 | Yes | Yes | Absent/present fixture; see CI evidence |
-| Fabric 1.20.1 | Fabric 1.0.7 | Yes | Yes | Absent/present fixture; see CI evidence |
-| Fabric 1.21.1 | Fabric 1.0.8 | Yes | Yes | Absent/present fixture; see CI evidence |
-| NeoForge 1.21.1 | NeoForge 1.0.8 | Yes | Yes | Absent/present fixture; see CI evidence |
+| Forge 1.20.1 | Forge 1.0.7 | Yes | Yes | Yes: packaged absent/present startup and final RGB |
+| Fabric 1.20.1 | Fabric 1.0.7 | Yes | Yes | Yes: packaged absent/present startup and final RGB |
+| Fabric 1.21.1 | Fabric 1.0.8 | Yes | Yes | Yes: packaged absent/present startup and final RGB |
+| NeoForge 1.21.1 | NeoForge 1.0.8 | Yes | Yes | Yes: packaged absent/present startup and final RGB |
 | NeoForge 26.1.2 | None listed on 2026-10-02 | No applicable hook | Not applicable | Not applicable |
+
+All four applicable targets passed fresh packaged absent/present runs locally on
+2026-10-02: six real-camera image cases per launch (48 total), with tracked entities
+and invisible controls. The active [Validate workflow](../.github/workflows/validate.yml)
+runs the same matrix and uploads startup logs, reports and reference/visible PNGs.
+CI status is recorded on the PR; a local pass is separate from a CI pass.
 
 “Included” means present in the built mod. “Source checked” means the published
 Extras source retains the targeted exemption method and dispatcher rejection.
