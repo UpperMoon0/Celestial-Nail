@@ -4,13 +4,14 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from run_sodium_extras_compat import CASES, validate_report
+from run_sodium_extras_compat import CASES, CAMERAS, BASE_ASSERTIONS, EXTRAS_ASSERTIONS, validate_report
 import runtime_artifacts
 
 def complete_report():
     return {"passed": True, "complete": True, "extrasPresent": True,
+            "cullingAssertions": sorted(BASE_ASSERTIONS | EXTRAS_ASSERTIONS),
             "expectedCases": len(CASES), "cases": [
-                {"case": name, "passed": True, "tracked": True, "summonAge": 300,
+                {"case": name, "camera": CAMERAS[name]+[0,0], "passed": True, "tracked": True, "summonAge": 300,
                  "expectedVisible": not name.endswith("-control"),
                  "visiblePixels": not name.endswith("-control"),
                  "renders": 0 if name.endswith("-control") else 45}
@@ -45,6 +46,14 @@ class CompatEvidenceTest(unittest.TestCase):
         report = complete_report()
         with self.assertRaises(ValueError): validate_report(report, False)
         report["complete"] = False
+        with self.assertRaises(ValueError): validate_report(report, True)
+
+    def test_requires_culling_assertions_and_real_cutoff_camera(self):
+        report = complete_report()
+        report["cullingAssertions"].pop()
+        with self.assertRaises(ValueError): validate_report(report, True)
+        report = complete_report()
+        report["cases"][0]["camera"] = [0,180,-40,0,0]
         with self.assertRaises(ValueError): validate_report(report, True)
 
     def test_rejects_tampered_cached_artifact_before_network(self):

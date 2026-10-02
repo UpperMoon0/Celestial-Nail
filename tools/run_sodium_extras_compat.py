@@ -15,14 +15,32 @@ TARGETS = {"forge-1.20.1": "47.4.0", "fabric-1.20.1": "0.18.4",
 CASES = {"horizontal-cutoff", "vertical-cutoff", "angle-left", "angle-right",
          "offscreen-control", "missing-draw-control"}
 
+BASE_ASSERTIONS = {"optional mod presence", "Nail survives vertical anchor cutoff",
+                   "Nail survives horizontal anchor cutoff", "Nail still respects frustum",
+                   "Nail still respects its own distance limit"}
+EXTRAS_ASSERTIONS = {"Nail exemption on first lookup", "Nail exemption on cached lookup",
+                    "ordinary entity remains subject to culling", "user whitelist remains respected",
+                    "ordinary control passes renderer visibility", "ordinary entity vertical cutoff",
+                    "ordinary entity horizontal cutoff", "compatibility preserves exact user whitelist",
+                    "configured entityDistanceCulling", "configured entityCullingDistanceX", "configured entityCullingDistanceY"}
+CAMERAS = {"horizontal-cutoff": [0,180,-150], "vertical-cutoff": [0,115,-40],
+           "angle-left": [-100,180,-100], "angle-right": [100,180,-100],
+           "offscreen-control": [0,180,-150], "missing-draw-control": [0,180,-150]}
+
 def validate_report(report, present):
     cases = report.get("cases", [])
     if report.get("passed") is not True or report.get("complete") is not True or report.get("extrasPresent") is not present:
         raise ValueError("Incomplete compatibility evidence: " + str(report.get("failure")))
     if len(cases) != len(CASES) or {case["case"] for case in cases} != CASES or report.get("expectedCases") != len(CASES):
         raise ValueError("Missing or duplicate real camera cases")
+    assertions = report.get("cullingAssertions", [])
+    expected_assertions = BASE_ASSERTIONS | (EXTRAS_ASSERTIONS if present else set())
+    if len(assertions) != len(expected_assertions) or set(assertions) != expected_assertions:
+        raise ValueError("Missing transformed culling/configuration assertions")
     for case in cases:
         expected = not case["case"].endswith("-control")
+        if case.get("camera", [])[:3] != CAMERAS[case["case"]]:
+            raise ValueError("Camera did not exercise the required cutoff/angle")
         if any(case.get(key) is not value for key, value in
                (("passed", True), ("tracked", True), ("expectedVisible", expected), ("visiblePixels", expected))):
             raise ValueError("Invalid image evidence: " + case["case"])
