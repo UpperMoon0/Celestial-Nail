@@ -2,7 +2,7 @@
 
 ## Current automation
 
-[validate.yml](.github/workflows/validate.yml) runs shared tests, all five target builds, release-tooling regressions and the NeoForge 1.21.1 runtime suite. [release.yml](.github/workflows/release.yml) reuses these checks before packaging and publishing all five artifacts to CurseForge and GitHub. A main-branch version change, an untagged release repair, or a manual run on main can release; feature branches and tag-only pushes do not publish.
+[validate.yml](.github/workflows/validate.yml) runs shared tests, all five target builds, release-tooling regressions, the NeoForge 1.21.1 runtime suite, and packaged Sodium Extras compatibility on all four applicable targets in absent/present modes with tracked-Nail final-image checks. [release.yml](.github/workflows/release.yml) reuses these checks before packaging and publishing all five artifacts to CurseForge and GitHub. A main-branch version change, an untagged release repair, or a manual run on main can release; feature branches and tag-only pushes do not publish.
 
 ## Prepare a release
 

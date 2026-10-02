@@ -9,7 +9,8 @@ Celestial Nail owns a persistent strike entity and its presentation. Perfomant B
 | `fabric-1.20.1/`, `forge-1.20.1/`, `fabric-1.21.1/` | Loom loader bootstraps, metadata and packaging |
 | `neoforge-1.21.1/`, `neoforge-26.1.2/` | ModDevGradle loader builds incorporating shared/version sources |
 | `neoforge-1.21.1/src/gameTest/` | Isolated server regression fixtures, excluded from production JARs |
-| `tools/` | Model/audio preparation and manual verification tools |
+| `compat-test/` | Shared packaged-client culling/image fixtures with separate loader registration and version-specific world startup; excluded from production JARs |
+| `tools/` | Model/audio preparation, shared pinned artifact verification, and regression runners |
 
 ## Strike lifecycle
 

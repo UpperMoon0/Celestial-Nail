@@ -85,4 +85,6 @@ Created by **NsTut**. Licensed under the **MIT License**.
 
 ### Rendering compatibility
 
+From 0.1.4, Nails are automatically exempt from Sodium Extras distance culling on Fabric/Forge 1.20.1 and Fabric/NeoForge 1.21.1. Sodium Extras remains optional, user configurations are preserved, and Nail's own distance and frustum checks still apply. No matching Extras 26.1.2 release was listed on 2026-10-02. See the [tested combinations and troubleshooting](https://github.com/UpperMoon0/Celestial-Nail/blob/main/docs/COMPATIBILITY.md#sodium-extras-distance-culling).
+
 The nail uses vanilla entity rendering with lightmap and normal lighting. Crystals remain luminous; portal and impact effects use vanilla emissive rendering. Shader packs control bloom and fog. This replaces the custom core shader that could disappear under shader replacement. The mod does not add dynamic block lighting.
