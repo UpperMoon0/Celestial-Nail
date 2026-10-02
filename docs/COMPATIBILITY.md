@@ -46,9 +46,9 @@ and invisible controls. The active [Validate workflow](../.github/workflows/vali
 runs the same matrix and uploads startup logs, reports and reference/visible PNGs.
 CI status is recorded on the PR; a local pass is separate from a CI pass.
 
-“Included” means present in the built mod. “Source checked” means the published
+â€œIncludedâ€ means present in the built mod. â€œSource checkedâ€ means the published
 Extras source retains the targeted exemption method and dispatcher rejection.
-“Runtime tested” requires successful startup of that packaged jar and a passing
+â€œRuntime testedâ€ requires successful startup of that packaged jar and a passing
 report, not compilation or source inspection alone. Exact filenames and hashes are
 pinned in [the artifact manifest](../tools/compat-artifacts.json); some Extras jars'
 internal version fields lag their published release labels. Check the current
