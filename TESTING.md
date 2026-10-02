@@ -126,6 +126,40 @@ locked the masks. The live report records `colorWritesDisabled` and requires RGB
 writes enabled in visible cases (`COLOR_WRITES_DISABLED` on failure). Final-image
 checks remain independently required.
 
+## Sodium Extras compatibility regression (four applicable targets)
+
+Install `python -m pip install -r tools/compat-requirements.txt`, set `JAVA_HOME`
+to Java 21, and run `python tools/run_sodium_extras_compat.py`. Use
+`--target fabric-1.21.1` (or any target in the matrix) for one loader. On a headless
+Linux machine run under `xvfb-run -a -s '-screen 0 1280x720x24'` with
+`LIBGL_ALWAYS_SOFTWARE=1` and `ALSOFT_DRIVERS=null`.
+
+The runner builds and launches the production Nail jar with a separate fixture jar,
+matching Boom, pinned renderer/dependency artifacts, and Extras absent/present.
+Each launch has a unique disposable game directory under `build/compat-runtime`.
+It never opens a user's world. Optional dependency versions and SHA-512 hashes are
+named in `tools/compat-artifacts.json`; download verification is shared with the
+shader runner through `tools/runtime_artifacts.py`.
+
+Shared assertions exercise the transformed EntityType exemption and dispatcher:
+first/cached Nail lookup, both anchor cutoffs, ordinary entity rejection, configured
+whitelist retention, and Nail's own distance/frustum rejection. Loader registration
+and version-specific world startup live separately from those reusable assertions.
+The image fixture then creates a real integrated-server Nail and requires client
+tracking, the correct summon clock, actual camera visibility, and final RGB pixels
+beyond both cutoffs and at two angles. Two hidden frames measure background noise.
+Offscreen and suppressed-draw controls must produce no mesh pixels or draws.
+
+Reports, production jar hashes, startup logs and hidden/visible PNGs are saved under
+`build/reports/sodium-extras-compat`. The active Validate workflow runs all four
+targets with both optional-mod modes. Fixture classes and optional mods must never
+be embedded in production artifacts. The existing tooling unit tests validate the
+runner/report contracts; their count is not a count of live compatibility cases.
+
+This suite does not certify arbitrary Extras versions, shaders, modpacks,
+multiplayer servers, or NeoForge 26.1.2 (no matching Extras release was listed when
+checked). The separate Forge/Oculus renderer suite covers shader compositing.
+
 ## Oculus render diagnostics and live regression (1.20.1)
 
 The client creates `config/celestial_nail-render-debug.properties` in its game directory.

@@ -1,0 +1,7 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+[[mods]]
+modId="celestial_nail_compat_test"
+version="1.0"
+displayName="Isolated Nail compatibility fixture"

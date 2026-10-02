@@ -13,9 +13,9 @@ public abstract class GameRendererMixin {
   return com.nstut.celestialnail.client.RenderRegressionHooks.ACTIVE ? 0 : partialTick;
  }
  @Inject(method="render",at=@At("HEAD"))
- private void celestial$testBeforeFrame(CallbackInfo ci) {com.nstut.celestialnail.client.RenderRegressionHooks.beforeFrame();}
+ private void celestial$testBeforeFrame(CallbackInfo ci) {com.nstut.celestialnail.client.RenderRegressionHooks.beforeFrame();com.nstut.celestialnail.compat.SodiumExtrasTestHooks.beforeFrame();}
  @Inject(method="render",at=@At("RETURN"))
- private void celestial$testAfterFrame(CallbackInfo ci) {com.nstut.celestialnail.client.RenderRegressionHooks.afterFrame();}
+ private void celestial$testAfterFrame(CallbackInfo ci) {com.nstut.celestialnail.client.RenderRegressionHooks.afterFrame();com.nstut.celestialnail.compat.SodiumExtrasTestHooks.afterFrame();}
  @Inject(method="getDepthFar",at=@At("RETURN"),cancellable=true)
  private void celestial$far(CallbackInfoReturnable<Float> cir) {cir.setReturnValue(CelestialNailAtmosphere.farPlane(cir.getReturnValue()));}
 }

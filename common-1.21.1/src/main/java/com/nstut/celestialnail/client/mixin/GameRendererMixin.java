@@ -5,6 +5,10 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.*;
 @Mixin(net.minecraft.client.renderer.GameRenderer.class)
 public abstract class GameRendererMixin {
+ @Inject(method="render",at=@At("HEAD"))
+ private void celestial$testBeforeFrame(CallbackInfo ci) {com.nstut.celestialnail.compat.SodiumExtrasTestHooks.beforeFrame();}
+ @Inject(method="render",at=@At("RETURN"))
+ private void celestial$testAfterFrame(CallbackInfo ci) {com.nstut.celestialnail.compat.SodiumExtrasTestHooks.afterFrame();}
  @Inject(method="getDepthFar",at=@At("RETURN"),cancellable=true)
  private void celestial$far(CallbackInfoReturnable<Float> cir) {cir.setReturnValue(CelestialNailAtmosphere.farPlane(cir.getReturnValue()));}
 }

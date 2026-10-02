@@ -22,6 +22,50 @@ The no-drop path handles vanilla containers, fluid purge, and the immediate six-
 
 Nails save their stage and terrain cursors. Existing entity NBT field names are retained by the Boom migration. Preserve a world backup before upgrading or removing mods that own persistent entities. Chunk ownership remains Nail's responsibility, including preserving pre-existing forced chunks.
 
+## Sodium Extras distance culling
+
+Sodium Extras rejects entities using the position of their anchor before Nail's
+renderer can test its full visual bounds. The default horizontal limit is 64
+blocks; the vertical test is `abs(anchorY - cameraY - 4) < 32`. This can hide an
+in-view Nail when walking away, beneath it, or looking at an angle. The optional
+client hook exempts only `celestial_nail:celestial_nail`; ordinary entities and user
+whitelists retain Extras' behavior, and Nail's own distance/frustum limits still apply.
+No pack configuration is rewritten.
+
+| Nail target | Extras artifact checked | Hook included | Source checked | Runtime tested |
+| --- | --- | --- | --- | --- |
+| Forge 1.20.1 | Forge 1.0.7 | Yes | Yes | Yes: packaged absent/present startup and final RGB |
+| Fabric 1.20.1 | Fabric 1.0.7 | Yes | Yes | Yes: packaged absent/present startup and final RGB |
+| Fabric 1.21.1 | Fabric 1.0.8 | Yes | Yes | Yes: packaged absent/present startup and final RGB |
+| NeoForge 1.21.1 | NeoForge 1.0.8 | Yes | Yes | Yes: packaged absent/present startup and final RGB |
+| NeoForge 26.1.2 | None listed on 2026-10-02 | No applicable hook | Not applicable | Not applicable |
+
+All four applicable targets passed fresh packaged absent/present runs locally on
+2026-10-02: six real-camera image cases per launch (48 total), with tracked entities
+and invisible controls. The active [Validate workflow](../.github/workflows/validate.yml)
+runs the same matrix and uploads startup logs, reports and reference/visible PNGs.
+CI status is recorded on the PR; a local pass is separate from a CI pass.
+
+“Included” means present in the built mod. “Source checked” means the published
+Extras source retains the targeted exemption method and dispatcher rejection.
+“Runtime tested” requires successful startup of that packaged jar and a passing
+report, not compilation or source inspection alone. Exact filenames and hashes are
+pinned in [the artifact manifest](../tools/compat-artifacts.json); some Extras jars'
+internal version fields lag their published release labels. Check the current
+[Extras release list](https://modrinth.com/mod/sodium-extras/versions) before trying
+a different version. The hook uses an optional injection and may not cover a future
+renamed method or a different mod's culling path.
+
+For an older Nail build or an unsupported Extras combination, add
+`"celestial_nail:celestial_nail"` to the existing `whitelist` in
+`config/sodiumextras-client.toml`, under
+`[embeddiumextras.performance.distanceCulling.entities]`. Preserve the other entries.
+Restart the client: Extras caches exemption results per entity type. Turning off
+entity distance culling is a broader fallback. If the Nail still vanishes, enable
+Nail render diagnostics and capture the exact loader, Extras/renderer versions,
+camera position and `latest.log`; the exemption cannot restore an untracked entity
+or override Nail's own fade/frustum tests.
+
 ## Troubleshooting
 
 - Missing dependency: check the loader/game combination and the table above, including Architectury on Fabric 1.21.1.

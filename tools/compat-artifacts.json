@@ -1,0 +1,97 @@
+{
+  "extras-fabric-1.21.1": {
+    "path": ".dependencies/compat/sodiumextras-fabric-1.0.8-1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/vqqx0QiE/versions/3Smu12Iu/sodiumextras-fabric-1.0.8-1.21.1.jar",
+    "sha512": "8702ae7b8a20cedc61b007ea83ed43fad955f2a882f81111bd836f386a77b6d2284cf091071a90dfd8f4bb5b9e18ed339d77f3e662d1c3bb784193ef83d67dbb"
+  },
+  "extras-neoforge-1.21.1": {
+    "path": ".dependencies/compat/sodiumextras-neoforge-1.0.8-1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/vqqx0QiE/versions/qDEGbszS/sodiumextras-neoforge-1.0.8-1.21.1.jar",
+    "sha512": "1bab2a7651b628a04066ce5221cd2df9bbbd8811da41a1f1c30c367b0a92bd5b42c5c13c9c45b961330d156836f367daf6225c72ba4f6acc7e42e9b44df3f419"
+  },
+  "extras-fabric-1.20.1": {
+    "path": ".dependencies/compat/sodiumextras-fabric-1.0.7-1.20.1.jar",
+    "url": "https://cdn.modrinth.com/data/vqqx0QiE/versions/FdVKLVds/sodiumextras-fabric-1.0.7-1.20.1.jar",
+    "sha512": "9b8cf69f39f89dabc2748673553870a6fbf0fdb173ac86099b76fbb21fc06e4a6ef5542ae1b6ff608b559010edbb0798bddd14bb4f581ab58206c7646fed82c5"
+  },
+  "extras-forge-1.20.1": {
+    "path": ".dependencies/compat/sodiumextras-forge-1.0.7-1.20.1.jar",
+    "url": "https://cdn.modrinth.com/data/vqqx0QiE/versions/VNFB2Vgv/sodiumextras-forge-1.0.7-1.20.1.jar",
+    "sha512": "47f298943079eb6b8f5222cbb093fec0c29c86a6f68e8000545059d64ff5c4cbf76fa774565a0d4d89d1fb0a278b62292f7619fb818e4fdfd9f01a637e7fcbfb"
+  },
+  "sodium-fabric-1.20.1": {
+    "path": ".dependencies/compat/sodium-fabric-0.5.13+mc1.20.1.jar",
+    "url": "https://cdn.modrinth.com/data/AANobbMI/versions/OihdIimA/sodium-fabric-0.5.13%2Bmc1.20.1.jar",
+    "sha512": "81c64f9c2d3402dfa43ee54d8f5a054f5243bfb08984e3addcab9fe885073c79c43c1c8c41e8f30b625d26a656f82a8e5f370bbbbf222ff1c08f4b324edb7ea4"
+  },
+  "sodium-fabric-1.21.1": {
+    "path": ".dependencies/compat/sodium-fabric-0.6.13+mc1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/AANobbMI/versions/u1OEbNKx/sodium-fabric-0.6.13%2Bmc1.21.1.jar",
+    "sha512": "13032e064c554fc8671573dadb07bc70e6ea2f68706c65c086c4feb1d2f664346a3414cbf9d1367b42b8d063a35e40f2f967ef9af31642e1f0093b852161fe91"
+  },
+  "sodium-neoforge-1.21.1": {
+    "path": ".dependencies/compat/sodium-neoforge-0.6.13+mc1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/AANobbMI/versions/Pb3OXVqC/sodium-neoforge-0.6.13%2Bmc1.21.1.jar",
+    "sha512": "ce58f34d05d96c0a109a5cea23c741f6bdb2e6be31fc087c5989274cefca5f10ba0c08c62083cf554a51f2c7667bf46e4164383f675c844e77633aef2659996b"
+  },
+  "sodium-options-api-forge-1.20.1": {
+    "path": ".dependencies/compat/sodiumoptionsapi-forge-1.0.10-1.20.1.jar",
+    "url": "https://cdn.modrinth.com/data/Es5v4eyq/versions/d0EFLitO/sodiumoptionsapi-forge-1.0.10-1.20.1.jar",
+    "sha512": "20b11f1582df3df3d351e0cffcfc8b97453e2d73164fbad46d3f4eb960cab57d8f708d84b818782ef019d5cd9494ce001161f753623680516a191d6f510ebb79"
+  },
+  "sodium-options-api-fabric-1.20.1": {
+    "path": ".dependencies/compat/sodiumoptionsapi-fabric-1.0.10-1.20.1.jar",
+    "url": "https://cdn.modrinth.com/data/Es5v4eyq/versions/nww69hqs/sodiumoptionsapi-fabric-1.0.10-1.20.1.jar",
+    "sha512": "0e14428925aa6dfe6539d59c1181b73904c83dd17e67965df331a429a5dfe7a0df415d40e2f88971d6cda12f76bf2948447805adac45c3de0c671daaca2b905b"
+  },
+  "sodium-options-api-fabric-1.21.1": {
+    "path": ".dependencies/compat/sodiumoptionsapi-fabric-1.0.10-1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/Es5v4eyq/versions/RR1lyQmh/sodiumoptionsapi-fabric-1.0.10-1.21.1.jar",
+    "sha512": "6f2d04c36090794790f64f18ec16e100465ceed9d3fb58c296303895bb891a2e03bbb6ad7747e911ba945f34a8bd38ab951dc3c9c04680798e8b348be3207e6f"
+  },
+  "sodium-options-api-neoforge-1.21.1": {
+    "path": ".dependencies/compat/sodiumoptionsapi-neoforge-1.0.10-1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/Es5v4eyq/versions/lrsX3TMS/sodiumoptionsapi-neoforge-1.0.10-1.21.1.jar",
+    "sha512": "f2f022183f300961d7d0503461daa59e3e606c32f189f1cb3307edaf765986c541929205b7bf6f40c4c88319696e9d863c1bf711bd441dc9b7081c198ddb445b"
+  },
+  "fabric-api-fabric-1.20.1": {
+    "path": ".dependencies/compat/fabric-api-0.92.5+1.20.1.jar",
+    "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/PB9Kjpo3/fabric-api-0.92.5%2B1.20.1.jar",
+    "sha512": "e42bf30f4c60d7e3b07579b3ecc1aed345dc76dd72633514c9df6e801e9753a582abe7d722797a0045d46ea860029bf138a301ec30397eb151a0611cea1069e7"
+  },
+  "fabric-api-fabric-1.21.1": {
+    "path": ".dependencies/compat/fabric-api-0.116.5+1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/gymiiTwJ/fabric-api-0.116.5%2B1.21.1.jar",
+    "sha512": "de38aca8c7b7c2a28a39a847a3d92b5c00e162734f29df38600bd4aeaa4b41f4de610b56b157caf0cbaf833ac7f0bf007496e6248fddf61b9ff7835ee1c8dbc0"
+  },
+  "architectury-api-fabric-1.20.1": {
+    "path": ".dependencies/compat/architectury-9.2.14-fabric.jar",
+    "url": "https://cdn.modrinth.com/data/lhGA9TYQ/versions/WbL7MStR/architectury-9.2.14-fabric.jar",
+    "sha512": "4cb8f009fd522d68a795d2cf5a657bdbe248b32ba7c33cd968f5ab521e9d60e198f8a3f6c50e7d960a2b8f50375116be0db1fd44b5710ea758697d8ea70d15de"
+  },
+  "architectury-api-fabric-1.21.1": {
+    "path": ".dependencies/compat/architectury-13.0.8-fabric.jar",
+    "url": "https://cdn.modrinth.com/data/lhGA9TYQ/versions/Wto0RchG/architectury-13.0.8-fabric.jar",
+    "sha512": "7a24a0481732c5504b07347d64a2843c10c29e748018af8e5f5844e5ea2f4517433886231025d823f90eb0b0271d1fa9849c27e7b0c81476c73753f79f19302a"
+  },
+  "architectury-api-forge-1.20.1": {
+    "path": ".dependencies/compat/architectury-9.2.14-forge.jar",
+    "url": "https://cdn.modrinth.com/data/lhGA9TYQ/versions/1MKTLiiG/architectury-9.2.14-forge.jar",
+    "sha512": "cf67f2050cafa00f0bee42e6d7bef77fdb808ac4f71742f7b4d6d5c1e6ffb49561a5a252f332d2b78a9767bdb5faa284611790dba303fbdc736ae36d794f61c7"
+  },
+  "reeses-sodium-options-fabric-1.20.1": {
+    "path": ".dependencies/compat/reeses_sodium_options-1.7.2+mc1.20.1-build.101.jar",
+    "url": "https://cdn.modrinth.com/data/Bh37bMuy/versions/Rc9pkPug/reeses_sodium_options-1.7.2%2Bmc1.20.1-build.101.jar",
+    "sha512": "efb5eab3caea346f9d13ea7c73e856f286bba1c87508c7250deada7bf4e9ad179a12e9861f61145d5c9578d88f740abf19c564f14579aac5da1f46bf6f086977"
+  },
+  "reeses-sodium-options-fabric-1.21.1": {
+    "path": ".dependencies/compat/reeses-sodium-options-fabric-1.8.3+mc1.21.4.jar",
+    "url": "https://cdn.modrinth.com/data/Bh37bMuy/versions/KoUrx3jJ/reeses-sodium-options-fabric-1.8.3%2Bmc1.21.4.jar",
+    "sha512": "42fd766fb3f4064938389599a53c3baad29e40e6ab9cdae9a4302eaa8b2daa96af9128978348549ef47122ecf2663b2e81e5155d01a4be4eba4d03c7e6974dba"
+  },
+  "reeses-sodium-options-neoforge-1.21.1": {
+    "path": ".dependencies/compat/reeses-sodium-options-neoforge-1.8.3+mc1.21.4.jar",
+    "url": "https://cdn.modrinth.com/data/Bh37bMuy/versions/xAiCe6w8/reeses-sodium-options-neoforge-1.8.3%2Bmc1.21.4.jar",
+    "sha512": "d66b5d30e1bb8316cb75d52ba8485c6c1cfb0d03624288f39c1826b92de9da9c3d79351be9d7303ca3226176255921f35063139da118c755cf9a709186129744"
+  }
+}

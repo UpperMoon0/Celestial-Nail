@@ -25,6 +25,7 @@ loom {
                 programArg "--height"
                 programArg "480"
             }
+
         }
     }
 }
@@ -54,7 +55,8 @@ dependencies {
     modImplementation "dev.architectury:architectury-forge:$architectury_api_version"
 
     // Optional local shader mods are remapped for development and kept out of releases.
-    modLocalRuntime fileTree(dir: rootProject.file('.dependencies/shaders'), include: ['*.jar'])
+    modLocalRuntime fileTree(dir: rootProject.file('.dependencies/shaders'),
+            include: ['*.jar'])
     // Loom does not expose Oculus's nested shader preprocessor on the dev classpath.
     forgeRuntimeLibrary fileTree(dir: rootProject.file('.dependencies/shader-libraries'), include: ['*.jar'])
 
@@ -123,3 +125,5 @@ tasks.named('runRenderRegression') {
             throw new GradleException("Live render regression failed: ${results.failures} failures. See ${report}")
     }
 }
+
+apply from: rootProject.file('tools/gradle/sodium-extras-fixture.gradle')

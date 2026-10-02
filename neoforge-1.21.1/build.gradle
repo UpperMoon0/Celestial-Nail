@@ -113,3 +113,5 @@ tasks.named('runGameTestServer') {
 
 dependencies { implementation "com.nstut:perfomant_boom-neoforge-1.21.1:${rootProject.boom_version}" }
 repositories { mavenLocal(); mavenCentral() }
+
+apply from: rootProject.file('tools/gradle/sodium-extras-fixture.gradle')

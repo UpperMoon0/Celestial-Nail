@@ -61,3 +61,5 @@ remapJar {
 }
 
 dependencies { modImplementation "com.nstut:perfomant_boom-fabric:${rootProject.boom_version}" }
+
+apply from: rootProject.file('tools/gradle/sodium-extras-fixture.gradle')

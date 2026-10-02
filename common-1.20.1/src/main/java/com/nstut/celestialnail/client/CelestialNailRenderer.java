@@ -35,6 +35,7 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
             if (RenderRegressionHooks.hideNail) return;
             RenderRegressionHooks.renders++;
         }
+        if (com.nstut.celestialnail.compat.SodiumExtrasTestHooks.hide(nail.nailId())) return;
         float age=nail.summonAge(partialTick), launchAge=nail.launchAge(partialTick), height=nail.nailHeight();
         float portalOffset=(float)(nail.portalY()-net.minecraft.util.Mth.lerp(partialTick,nail.yo,nail.getY()));
         boolean launched=nail.isLaunched(), impact=nail.isImpacting();

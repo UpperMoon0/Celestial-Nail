@@ -1,0 +1,32 @@
+// Isolated fixture: production startup loads this separate jar only when explicitly enabled.
+sourceSets {
+ compatTest {
+  resources.srcDir rootProject.file("compat-test/${project.name.split('-', 2)[1]}/resources")
+  java.srcDir rootProject.file('compat-test/src/main/java')
+  java.srcDir rootProject.file("compat-test/${project.name.split('-', 2)[1]}/java")
+  java.srcDir rootProject.file("compat-test/${project.name.split('-', 2)[0]}/java")
+  resources.srcDir rootProject.file("compat-test/${project.name.split('-', 2)[0]}/resources")
+  compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+ }
+}
+configurations {
+ compatTestImplementation.extendsFrom implementation
+ compatTestCompileOnly.extendsFrom compileOnly
+}
+tasks.register('compatTestJar', Jar) {
+ dependsOn tasks.named('compatTestClasses')
+ from sourceSets.compatTest.output
+ archiveClassifier = 'compat-test-dev'
+ manifest { attributes 'FMLModType': 'MOD' }
+}
+if (project.name.startsWith('neoforge-')) {
+ neoForge { addModdingDependenciesTo sourceSets.compatTest }
+ tasks.register('compatTestProductionJar') { dependsOn 'compatTestJar' }
+} else {
+tasks.register('compatTestProductionJar', tasks.named('remapJar').get().class.superclass) {
+ dependsOn tasks.named('compatTestJar')
+ inputFile.set tasks.named('compatTestJar').flatMap { it.archiveFile }
+ archiveClassifier = 'compat-test'
+ addNestedDependencies = false
+}
+}
