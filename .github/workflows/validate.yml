@@ -169,7 +169,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest discover -s tools -p 'test_release.py' -v
+      - run: python -m unittest discover -s tools -p 'test_*.py' -v
       - run: python tools/release.py check
       - name: Validate GitHub Actions workflows
         shell: bash
@@ -185,4 +185,3 @@ jobs:
           (cd "$directory"; grep '  actionlint_1.7.12_linux_amd64.tar.gz$' actionlint_1.7.12_checksums.txt | sha256sum --check --strict)
           tar -xzf "$directory/actionlint_1.7.12_linux_amd64.tar.gz" -C "$directory"
           "$directory/actionlint" -color
-
