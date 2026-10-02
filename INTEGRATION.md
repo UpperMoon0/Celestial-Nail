@@ -1,5 +1,16 @@
 # Integration guide
 
+## Sodium Extras distance culling (Minecraft 1.20.1)
+
+Celestial Nail automatically exempts `celestial_nail:celestial_nail` from Sodium
+Extras' anchor-based entity distance culling on compatible builds. Its default limits
+are 64 blocks horizontally and 32 blocks vertically; a tall Nail can remain visible
+well beyond those limits. Its own visual-bounds frustum check and horizontal
+distance fade still apply. Other entities retain Sodium Extras' configured limits.
+The optional client hook does not modify configuration files or require Sodium
+Extras to be installed. This compatibility targets the `embPlus$isAllowed`
+exemption check present in Sodium Extras Forge 1.0.7 for Minecraft 1.20.1.
+
 Celestial Nail can be orchestrated through Minecraft commands for maps, events and server scenarios. This guide describes that interface and the development boundary; it does not promise a stable Java API for entity internals.
 
 ## Command blocks and datapack functions

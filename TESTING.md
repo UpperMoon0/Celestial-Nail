@@ -126,6 +126,25 @@ locked the masks. The live report records `colorWritesDisabled` and requires RGB
 writes enabled in visible cases (`COLOR_WRITES_DISABLED` on failure). Final-image
 checks remain independently required.
 
+## Sodium Extras compatibility regression (1.20.1)
+
+Run `python tools/run_sodium_extras_compat.py` using Java 21. On a headless Linux
+host, wrap it with `xvfb-run -a`. The runner verifies pinned Embeddium 0.3.31 and
+Sodium Extras Forge 1.0.7 artifacts, then boots an isolated Forge client twice,
+with Extras absent and present. Test classes are excluded from production jars.
+
+The fixture invokes the actual transformed entity-type exemption method and
+Minecraft's entity dispatcher. It checks Nails beyond Extras' horizontal and
+vertical cutoffs, retained Nail distance/frustum rejection, ordinary entity
+rejection, an existing user whitelist entry, repeated exemption lookup, and
+an unchanged whitelist without a Nail entry. It uses no world or terrain edits.
+Reports and logs are saved under `build/reports/sodium-extras-compat`.
+`tools/ci/sodium-extras-compat-workflow.patch` adds the same two-mode fixture to
+GitHub Actions using Xvfb and Mesa. Apply it with a credential authorized to update
+workflows; the dedicated compatibility job is not enabled until that patch lands.
+This tests culling admission; final displayed pixels and unrelated culling mods
+remain the responsibility of the rendering suite and pack reproduction.
+
 ## Oculus render diagnostics and live regression (1.20.1)
 
 The client creates `config/celestial_nail-render-debug.properties` in its game directory.

@@ -25,6 +25,16 @@ loom {
                 programArg "--height"
                 programArg "480"
             }
+            sodiumExtrasCompat {
+                client()
+                vmArg "-Dmixin.env.disableRefMap=true"
+                vmArg "-Dcelestial_nail.sodiumExtrasCompatTest=true"
+                runDir("run/sodium-extras-compat")
+                programArg "--width"
+                programArg "854"
+                programArg "--height"
+                programArg "480"
+            }
         }
     }
 }
@@ -54,7 +64,9 @@ dependencies {
     modImplementation "dev.architectury:architectury-forge:$architectury_api_version"
 
     // Optional local shader mods are remapped for development and kept out of releases.
-    modLocalRuntime fileTree(dir: rootProject.file('.dependencies/shaders'), include: ['*.jar'])
+    modLocalRuntime fileTree(dir: rootProject.file('.dependencies/shaders'),
+            include: gradle.startParameter.taskNames.any { it.endsWith('runSodiumExtrasCompat') }
+                    ? ['embeddium-*.jar'] : ['*.jar'])
     // Loom does not expose Oculus's nested shader preprocessor on the dev classpath.
     forgeRuntimeLibrary fileTree(dir: rootProject.file('.dependencies/shader-libraries'), include: ['*.jar'])
 
@@ -96,6 +108,47 @@ def renderTestJar = tasks.register('renderTestJar', Jar) {
 }
 if (gradle.startParameter.taskNames.any { it.endsWith('runRenderRegression') }) {
     dependencies { localRuntime files(renderTestJar) }
+}
+if (gradle.startParameter.taskNames.any { it.endsWith('runSodiumExtrasCompat') }) {
+    dependencies {
+        localRuntime files(renderTestJar)
+        // Loom does not expose optional mods' nested MixinExtras on the dev classpath.
+        modRuntimeOnly('io.github.llamalad7:mixinextras-forge:0.4.1') { transitive = false }
+        forgeRuntimeLibrary('io.github.llamalad7:mixinextras-common:0.4.1') { transitive = false }
+    }
+    if (rootProject.hasProperty('sodiumExtrasJar')) {
+        def extras = rootProject.file(rootProject.property('sodiumExtrasJar'))
+        if (!extras.isFile()) throw new GradleException("Missing Sodium Extras test artifact: ${extras}")
+        dependencies { modLocalRuntime files(extras) }
+    }
+}
+
+tasks.named('runSodiumExtrasCompat') {
+    systemProperty 'celestial_nail.expectSodiumExtras', rootProject.hasProperty('sodiumExtrasJar').toString()
+    dependsOn renderTestJar
+    timeout = java.time.Duration.ofMinutes(5)
+    doFirst {
+        def target = file('run/sodium-extras-compat')
+        new File(target, 'config').mkdirs()
+        new File(target, 'config/oculus.properties').text = 'enableShaders=false\n'
+        // Same named-development workarounds as the existing render fixture.
+        new File(target, 'config/embeddium-mixins.properties').text = 'mixin.features.render.gui.debug=false\nmixin.features.render.immediate.buffer_builder.fast_delegate=false\nmixin.features.gui.hooks.settings=false\n'
+        new File(target, 'config/sodiumextras-client.toml').text = '''
+[embeddiumextras.performance.distanceCulling.entities]
+enable = true
+cullingMaxDistanceX = 4096
+cullingMaxDistanceY = 32
+whitelist = ["minecraft:ghast"]
+'''
+        new File(target, 'sodium-extras-compat-results.json').delete()
+    }
+    doLast {
+        def report = file('run/sodium-extras-compat/sodium-extras-compat-results.json')
+        if (!report.exists()) throw new GradleException('Client exited without Sodium Extras compatibility evidence')
+        def results = new groovy.json.JsonSlurper().parse(report)
+        if (!results.passed || results.extrasPresent != rootProject.hasProperty('sodiumExtrasJar'))
+            throw new GradleException("Sodium Extras compatibility regression failed: ${report}")
+    }
 }
 tasks.named('runRenderRegression') {
     dependsOn renderTestJar

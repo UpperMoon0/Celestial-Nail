@@ -9,7 +9,8 @@
     "SoundEngineMixin",
     "GameRendererMixin",
     "LevelRendererMixin",
-    "VertexBufferMixin"
+    "VertexBufferMixin",
+    "SodiumExtrasEntityTypeMixin"
   ],
   "injectors": {
     "defaultRequire": 1
