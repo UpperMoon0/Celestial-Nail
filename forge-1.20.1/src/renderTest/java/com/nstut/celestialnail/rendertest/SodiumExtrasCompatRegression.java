@@ -26,7 +26,7 @@ public final class SodiumExtrasCompatRegression {
 
     @SubscribeEvent
     public static void tick(TickEvent.ClientTickEvent event) {
-        if (!Boolean.getBoolean("celestial_nail.sodiumExtrasCompatTest") || done
+        if (!Boolean.getBoolean("celestial_nail.sodiumExtrasCompatTest") || Boolean.getBoolean("celestial_nail.packagedCompatTest") || done
                 || event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.getOverlay() != null) return;

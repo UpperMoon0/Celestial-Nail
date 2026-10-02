@@ -8,7 +8,8 @@
     "GuiMixin",
     "SoundEngineMixin",
     "GameRendererMixin",
-    "LevelRendererMixin"
+    "LevelRendererMixin",
+    "SodiumExtrasEntityTypeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

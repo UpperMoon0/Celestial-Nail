@@ -176,3 +176,5 @@ tasks.named('runRenderRegression') {
             throw new GradleException("Live render regression failed: ${results.failures} failures. See ${report}")
     }
 }
+
+apply from: rootProject.file('tools/gradle/sodium-extras-fixture.gradle')

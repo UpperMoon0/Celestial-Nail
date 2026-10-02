@@ -28,6 +28,7 @@ public final class CelestialNailRenderer extends EntityRenderer<CelestialNailEnt
     }
     @Override
     public void render(CelestialNailEntity nail, float entityYaw, float partialTick, PoseStack pose, MultiBufferSource buffers, int packedLight) {
+        if (com.nstut.celestialnail.compat.SodiumExtrasTestHooks.hide(nail.nailId())) return;
         float age=nail.summonAge(partialTick), launchAge=nail.launchAge(partialTick), height=nail.nailHeight();
         float portalOffset=(float)(nail.portalY()-net.minecraft.util.Mth.lerp(partialTick,nail.yo,nail.getY()));
         boolean launched=nail.isLaunched(), impact=nail.isImpacting();
