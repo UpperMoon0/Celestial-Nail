@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from run_sodium_extras_compat import CASES, CAMERAS, BASE_ASSERTIONS, EXTRAS_ASSERTIONS, validate_report
+from run_sodium_extras_compat import CASES, CAMERAS, BASE_ASSERTIONS, EXTRAS_ASSERTIONS, TARGETS, validate_report, runtime_artifact_paths
 import runtime_artifacts
 
 def complete_report():
@@ -18,6 +18,31 @@ def complete_report():
                 for name in sorted(CASES)]}
 
 class CompatEvidenceTest(unittest.TestCase):
+    def test_current_version_fixture_and_configured_boom_ignore_stale_artifacts(self):
+        for target in TARGETS:
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
+                root=Path(directory); repository=root/'maven'
+                (root/'gradle.properties').write_text('mod_version = 0.1.5\nboom_version = 1.2.0\n',encoding='utf-8')
+                libs=root/target/'build/libs'; libs.mkdir(parents=True)
+                suffix='-compat-test-dev.jar' if target.startswith('neoforge') else '-compat-test.jar'
+                for version in ('0.1.4','0.1.5'):
+                    (libs/('celestial-nail-'+target+'-'+version+suffix)).touch()
+                loader,game=target.split('-',1)
+                artifact='perfomant_boom-'+(loader if game=='1.20.1' else target)
+                for version in ('1.1.3','1.2.0'):
+                    boom=repository/'com/nstut'/artifact/version/(artifact+'-'+version+'.jar')
+                    boom.parent.mkdir(parents=True); boom.touch()
+                nail,fixture,boom=runtime_artifact_paths(target,root,repository)
+                self.assertEqual(libs/('celestial-nail-'+target+'-0.1.5.jar'),nail)
+                self.assertEqual(libs/('celestial-nail-'+target+'-0.1.5'+suffix),fixture)
+                self.assertEqual('1.2.0',boom.parent.name)
+                boom.unlink()
+                with self.assertRaisesRegex(ValueError,'Missing matching Boom artifact.*1.2.0'):
+                    runtime_artifact_paths(target,root,repository)
+                fixture.unlink()
+                with self.assertRaisesRegex(ValueError,'Missing compatibility fixture.*0.1.5'):
+                    runtime_artifact_paths(target,root,repository)
+
     def test_complete_report(self):
         validate_report(complete_report(), True)
 

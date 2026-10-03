@@ -65,3 +65,6 @@ sourceSets.main.resources.srcDir rootProject.file('common-26.1.2/src/main/resour
 
 dependencies { implementation "com.nstut:perfomant_boom-neoforge-26.1.2:${rootProject.boom_version}" }
 repositories { mavenLocal(); mavenCentral() }
+
+// Shared procedural client compositor; deliberately excluded from the pure common test module.
+sourceSets.main.java.srcDir rootProject.file('common-client/src/main/java')

@@ -33,14 +33,6 @@
       }
     ]
   },
-  "launch_charge": {
-    "sounds": [
-      {
-        "name": "celestial_nail:launch_charge",
-        "stream": false
-      }
-    ]
-  },
   "impact_boom": {
     "sounds": [
       {
@@ -52,8 +44,16 @@
   "aftershock": {
     "sounds": [
       {
-        "name": "celestial_nail:aftershock",
-        "stream": false
+        "name": "celestial_nail:shockwave",
+        "stream": true
+      }
+    ]
+  },
+  "portal_close": {
+    "sounds": [
+      {
+        "name": "celestial_nail:portal_close",
+        "stream": true
       }
     ]
   }

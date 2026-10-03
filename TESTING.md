@@ -1,5 +1,39 @@
 # Verification
 
+## Normal development clients with rendering mods
+
+Run `python tools/install_dev_renderers.py` once from the repository root. It verifies
+SHA-512 pinned downloads and installs separate local profiles, excluded from release
+JARs. The ordinary client launch tasks then load these combinations:
+
+| Client | Installed combination |
+| --- | --- |
+| Forge 1.20.1 | Embeddium 0.3.31 + Sodium Extras 1.0.7 + Options API 1.0.10; existing Oculus remains available |
+| Fabric 1.20.1 | Sodium 0.5.13 + Sodium Extras 1.0.7 + Options API 1.0.10 + Reese's Options 1.7.2 |
+| Fabric 1.21.1 | Sodium 0.6.13 + Sodium Extras 1.0.8 + Options API 1.0.10 + Reese's Options 1.8.3 |
+| NeoForge 1.21.1 | Sodium 0.6.13 + Sodium Extras 1.0.8 + Options API 1.0.10 + Reese's Options 1.8.3 |
+
+Use the usual `runForge1201Client`, `runFabric1201Client`, `runFabric1211Client`,
+and `runNeoForge1211Client` root tasks. NeoForge additionally has an Embeddium
+1.0.15 profile: `./gradlew runNeoForge1211Client -PdevRenderer=embeddium`.
+That profile excludes Sodium Extras because its 1.21.1 builds require Sodium's API.
+Neither requested mod currently publishes a 26.1.2 build, so that dev target keeps
+its existing renderer. Existing worlds and mod preferences are preserved.
+
+The Fabric and Forge local dependencies are remapped by Loom. NeoForge's local
+profiles use separate `neoforge-1.21.1/run/client` and `run/client-embeddium`
+directories containing loose mod JARs, not server/test runs. Older saves under
+`neoforge-1.21.1/run/saves` remain intact in their original location.
+The installer also exposes embedded config/runtime libraries that Loom omits from
+its loose dev classpath. Fabric 1.20.1 pins LWJGL Java libraries and natives to
+3.3.1, as required by Sodium 0.5.13; its normal dev upgrade to 3.3.2 is rejected
+by Sodium's startup check.
+
+On 2026-10-03, all five profiles above completed loader initialization, sound
+startup, and texture/shader resource loading on the local NVIDIA GPU. Logs are
+saved under `build/reports/dev-renderers`. These are client startup checks;
+in-world cinematic behavior with each combination still needs manual testing.
+
 ## Automated final-image Oculus regression
 
 Run `python tools/run_render_regression.py` with Java 21 selected. This downloads
@@ -15,7 +49,7 @@ packets. It never opens the ordinary development world's saves. The test helper 
 and its resources are packaged only into a separate render-test JAR, not release JARs.
 Each run keeps its world and evidence; no existing worlds are deleted.
 
-Forty-two live cases cover both shader-disabled and confirmed Complementary-enabled
+Seventy-six live cases cover both shader-disabled and confirmed Complementary-enabled
 pipelines: near/far idle, close/inside/underside hover views, dark pinned state, cloud overlap, minimum/maximum scale, portal opening, emergence, descent,
 impact, a large embedded body with a buried anchor, and crumble. Six controls in
 each mode cover offscreen/out-of-range geometry, deliberately suppressed draws,
@@ -46,6 +80,8 @@ visible pixels; the terrain-occlusion and composite-loss controls must still hav
 Missing cases, an incomplete run, or any failed assertion produce a non-zero Gradle
 and wrapper exit. Reports distinguish `FINAL_IMAGE_MISSING` from `BLENDING_DISABLED`
 and other upstream failures.
+
+Thirty-four additional cases isolate the procedural compositor: for each shader mode the same world and Nail are rendered with the pass disabled for both reference images, then enabled for the visible image. Cases cover impact contact, a weaker looking-away pulse, dust, persistent presence, a real wall hiding the entire dust volume, an expired impact clock, and disabled preferences. Active effects must change the final RGB image above temporal noise and perform real compositor draws; the wall control must draw the pass without producing visible dust. Expired and disabled controls must perform no compositor draws. The subtle lingering-grade case uses a 2/255 changed-pixel threshold; stronger effects use 8/255. Both retain the absolute and noise-relative signal requirements. Body-only cases keep cinematics disabled so a screen effect cannot substitute for Nail geometry.
 
 Results are in `forge-1.20.1/run/render-regression/render-test-results.json` and paired
 `render-test-evidence/*-hidden.png` / `*-visible.png` images. `tools/test_live_render_report.py`
@@ -127,6 +163,13 @@ writes enabled in visible cases (`COLOR_WRITES_DISABLED` on failure). Final-imag
 checks remain independently required.
 
 ## Sodium Extras compatibility regression (four applicable targets)
+
+First publish the Perfomant Boom revision matching Nail's `boom_version` in
+`gradle.properties` to Maven local for the targets you will test. In the Boom
+checkout, run `./gradlew buildAll publishToMavenLocal` (`gradlew.bat` on Windows).
+See [the development setup](CONTRIBUTING.md#local-development). The runner selects
+the configured Boom version and the current Nail version's exact fixture filename;
+older artifacts in `build/libs` do not affect selection.
 
 Install `python -m pip install -r tools/compat-requirements.txt`, set `JAVA_HOME`
 to Java 21, and run `python tools/run_sodium_extras_compat.py`. Use
@@ -283,7 +326,6 @@ The newly added runtime suite currently covers NeoForge 1.21.1, not all five loa
 
 Boundary reconciliation intentionally covers only the immediate six-neighbor layer and uses suppressed-propagation updates. It can remove unsupported boundary attachments and schedule normal fluid ticks, but does not promise arbitrary recursive redstone or mod-specific network settlement outside the crater. Fully settled worlds should not be inferred from a passed torch regression.
 
-
 ## Review follow-up evidence
 
 The two review regressions were reproduced locally against the pre-fix implementation: tripwire removal loaded a cold neighbor and the complete scaffolding strike produced an item. After scoped callback suppression and bounded survival reconciliation, all ten required NeoForge 1.21.1 tests passed. Logs are generated under `build/review-regressions-before.log` and `build/review-regressions-after.log` (local build artifacts). Runtime coverage remains NeoForge 1.21.1; the other targets have build/refmap verification only.
@@ -293,7 +335,6 @@ Older engines suppress nail-scoped `onRemove`/`onPlace` dispatch and explicitly 
 ## Historical custom-shader review without Minecraft
 
 Run `tools/render_nail_shader_job.ps1 -Open` after installing Python `numpy Pillow moderngl glcontext`. It exports the current game mesh, compiles both GLSL variants on the GPU, verifies independent animation/view response and pulse visibility, and produces two GIFs plus a self-contained `build/crystal-glint-preview/preview.html` viewer. The viewer offers play/pause, time scrubbing, speed, rotation, pulse toggle and full/crown/tip views. All mesh, atlas and shader data are embedded; opening the HTML does not require network access or a Minecraft process. Browser review confirmed rendering, camera preset changes, time scrubbing and resumed playback. Studio lighting replaces world lighting; portal/world effects and live-client integration remain outside this preview.
-
 
 ## Buried-nail visibility and launch orbit
 
@@ -315,13 +356,11 @@ For an offline removal preview, first run `tools/render_nail_shader_job.ps1`, th
 
 The complete-impact adjacent-scaffolding regression failed before the correction (`build/adjacent-scaffold-before.log`). Boundary reconciliation now repeats its saved cursor after any successful state replacement and finishes only after an unchanged full pass. Every revisit still consumes the shared scan/change/time allowance, and chunk readiness checks remain in place. The changed-pass flag survives NBT reload; older active saves without it conservatively request another pass. Native deferred block ticks remain suppressed and fluid ticks remain allowed. This covers dependencies within the same immediate boundary layer, not recursive external physics networks. Each pass remains quadratic in radius; total work also depends on the number of passes required to settle.
 
-
 ## Boundary leaf support
 
 Vanilla leaf shape updates schedule distance recalculation instead of changing the state immediately. The bounded adapter performs that six-neighbor calculation directly using the version's `LeavesBlock.getOptionalDistanceAt` (including version-specific support tags). Unsupported natural leaves are replaced through the no-drop path immediately; persistent leaves retain their properties and receive the corrected distance. Waterlogged leaf reconciliation preserves permitted fluid scheduling. The existing readiness guard covers all six reads, and changed states participate in the saved, budgeted revisits.
 
 Before the correction, the natural-leaf, adjacent-leaf and persistent-distance full-impact regressions failed; the supported-leaf control and previous thirteen tests passed (`build/boundary-leaves-before.log`). Post-fix results are recorded in `build/boundary-leaves-after.log`. Runtime coverage is NeoForge 1.21.1; the other adapters are build-verified.
-
 
 ## Brushable gravity and coral hydration
 
@@ -331,7 +370,7 @@ The full-impact suspicious-sand, suspicious-gravel and dry-coral regressions fai
 
 ## Shared terrain dependency
 
-Publish the matching Perfomant Boom 1.1.3 artifacts to Maven local before these checks.
+Publish the Perfomant Boom version configured by `boom_version` to Maven local before these checks.
 All terrain mutation tests now exercise Boom's external API and mixins. The three passes
 and cursors no longer live in Nail; the entity keeps its existing persisted cursor fields.
 When iterating on Boom at the same version, refresh Nail's dependency cache with
@@ -351,3 +390,25 @@ phase, stop motion, avoid an impact, retain the saved crumble clock, and discard
 only after CRUMBLE_TICKS. The descent test checks forced-chunk cleanup. Existing
 deep-impact/embedded tests continue to protect deliberate below-world embedding.
 The production change is applied to all three Minecraft version adapters.
+
+### Cinematic implementation verification
+
+The new compositor has adapters for 1.20.1, 1.21.1 and 26.1.2. Shared tests cover its 750 ms authored impact stages, Reduced/Off modes, first-render timing after delayed updates, old clocks, dust fade, lingering radius and bounded preference values. Building all five targets checks the adapters; live final-image tests specifically exercise Forge 1.20.1 with vanilla and Oculus/Complementary. Compilation alone does not certify visuals on 1.21.1 or 26.1.2, other shader packs, alternate GPU backends, multiplayer packet latency, resizing or resource reload. The implementation reads shared synchronized entity state rather than broadcasting a new effect packet; every client that tracks the Nail independently samples that clock.
+
+The 1.20.1 adapter takes the real world view matrix from the `renderLevel` pose stack, including Forge camera roll. Its Camera quaternion uses a positive-Z forward basis, while 1.21.1 and 26.1.2 use negative-Z; treating them identically reverses the dust projection. This was checked against decompiled 1.20.1 Forge 47.4.0 `GameRenderer`/`Camera` and the cached 1.21.1 and 26.1.2 sources. Dust fixtures use the normal 32-block crater radius. A delayed-impact fixture delivers real server metadata after both reference images, observes the update, then advances the client game clock by eight ticks before capturing the first visible frame. Dust and body draws are disabled in that fixture, so only the impact pulse can pass its final-image assertion. Facing and looking-away impact fixtures share the contact timestamp so their relative strength is observable.
+
+In the initial cinematic verification on 2026-10-03, all five production targets built, 34 shared tests and 11 Python render-validator tests passed, and all 56 Forge 1.20.1 final-image cases passed on the local GTX 1050 Ti in vanilla and Oculus 1.8.0/Complementary r5.9.3 modes. Packaged NeoForge 1.21.1 checks passed all six scenes with Sodium Extras present and all six absent. The isolated NeoForge 26.1.2 client reached its loaded title screen with the new mixins; this validates startup, not its world visuals. A final metadata guard excludes the default idle state of an unidentified freshly constructed client entity from arming receipt grace; it does not change the synchronized clocks or compositor exercised by the image matrix.
+
+The Forge dev menu has a separate isolated probe: `./gradlew :forge-1.20.1:runClient -PdevMenuSmoke`. It presses the real Video Settings button, verifies Embeddium and the Extras option pages, and captures both menus under `forge-1.20.1/run/menu-smoke/menu-evidence`. The installer builds a checksum-derived local Embeddium copy with only its synthetic menu hook adapted from `lambda$init$2` to the current Loom `method_19828`; the original download and release JAR remain untouched. The Fabric event API used by Options API must load in the game classloader because it references Minecraft types, while the MixinExtras bootstrap stays on Forge's library runtime.
+
+The revised presentation and audio passed all 58 Forge 1.20.1 final-image cases on 2026-10-03, including real delayed impact metadata followed by eight client catch-up ticks, in vanilla and Complementary modes with Embeddium and Sodium Extras installed. The menu probe confirmed the actual Embeddium screen and Extras pages. All five targets built with the supplied mono Ogg explosion and portal-closing recordings; 34 shared tests and 15 Python image/compatibility report tests passed. This checks integrated-server metadata delivery, not a multi-client latency simulation. Original MP3 inputs are preserved under `.dependencies/audio-sources`; the ambience generator does not overwrite the replacement recordings.
+
+The ledge-dust fixture hides the Nail body and views from 80 blocks below the impact origin, beneath an opaque high ledge. Its final image must contain the falling dust volume independently of the impact pulse. The camera-shake fixture measures actual rendered camera yaw and pitch changes with fixed player inputs; each must exceed 0.1 degrees. All other fixtures suppress shake to keep their paired image comparisons deterministic.
+
+On 2026-10-03, all 62 final-image cases passed on the local GTX 1050 Ti with Embeddium and Sodium Extras, with shaders disabled and with Oculus/Complementary enabled. Both new cases passed in each mode: lower-level dust with the body hidden, and measured camera rotation with fixed player inputs. All five targets built, 36 shared tests and 15 Python report-validator tests passed. GPU frame-time improvement is not measured; the optimization reduces the bounded shader workload (two noise octaves instead of three, arithmetic hashing, empty-segment rejection, and per-frame shape calculation). Runtime visual coverage remains Forge 1.20.1.
+
+Anime impact presentation lasts 750 ms on the monotonic first-render clock. Independent phase images isolate white, inverted, gold-fracture, ink-fracture and recovery treatments, plus Reduced and Off modes, with body and dust hidden. The local `impactMode` property accepts `full`, `reduced` or `off`; Full contains strong flashing, Reduced is a smooth cold grade, and Off suppresses the impact screen sequence and its camera shake. Existing `impactIntensity`, `shakeIntensity` and Minecraft Screen Effects remain respected.
+
+On 2026-10-03, the authored impact sequence passed 76 final-image cases across vanilla and Oculus/Complementary modes with Embeddium and Sodium Extras. The full run passed 74 cases; two Off controls correctly showed no effect but had an erroneous visible-image expectation. After fixing only that fixture expectation, `python tools/run_render_regression.py --case cinematic-sequence-off-control` passed both controls. `build/anime-impact-verification.json` validates the combined 76 cases and records both source reports. All five production targets built, 36 shared tests and 16 Python validator tests passed. Runtime shader coverage remains Forge 1.20.1.
+
+The compositor now checks OpenGL 3.3 or ARB sampler-object support before sampler queries, overrides and restoration. OpenGL 3.2-only contexts skip those operations and use the scratch textures' filtering parameters. All five targets rebuilt, 36 Java and 56 Python tests passed for this capability-guard follow-up. No fresh visual clients or 3.2-only hardware tests were run; the saved 76-case visual evidence predates this guard.

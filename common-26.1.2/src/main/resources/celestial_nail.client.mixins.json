@@ -7,7 +7,8 @@
     "CameraMixin",
     "GuiMixin",
     "SoundEngineMixin",
-    "LevelRendererMixin"
+    "LevelRendererMixin",
+    "GameRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

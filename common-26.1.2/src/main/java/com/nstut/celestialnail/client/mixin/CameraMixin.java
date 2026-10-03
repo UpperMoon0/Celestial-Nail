@@ -9,8 +9,8 @@ public abstract class CameraMixin {
  @Shadow public abstract float xRot();
  @Shadow public abstract float yRot();
  @Inject(method="alignWithEntity",at=@At("TAIL")) private void celestial$shake(CallbackInfo ci) {
-  float s=CelestialNailAtmosphere.shake; double t=System.nanoTime()*1.0e-8;
-  if(s>0.001F)setRotation(yRot()+(float)Math.sin(t*1.7)*s*.8F,xRot()+(float)Math.sin(t*2.3)*s*.6F);
+  float s=CelestialNailAtmosphere.cameraShake(); double t=System.nanoTime()*1.0e-9;
+  if(s>0.001F)setRotation(yRot()+(float)(Math.sin(t*43)+.3*Math.sin(t*71))*s*1.6F,xRot()+(float)(Math.sin(t*53)+.25*Math.sin(t*83))*s*1.1F);
  }
  @Shadow private float depthFar;
  @Inject(method="update",at=@At(value="FIELD",target="Lnet/minecraft/client/Camera;depthFar:F",opcode=181,shift=At.Shift.AFTER))

@@ -1,0 +1,30 @@
+// Opt-in, isolated menu test; helper classes never enter a production JAR.
+if (providers.gradleProperty('devMenuSmoke').isPresent()) {
+    sourceSets {
+        menuSmoke {
+            java.srcDir rootProject.file('tools/dev-menu-smoke/java')
+            resources.srcDir rootProject.file('tools/dev-menu-smoke/resources')
+            compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+            runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+        }
+    }
+    def probeJar = tasks.register('menuSmokeJar', Jar) {
+        from sourceSets.menuSmoke.output
+        archiveClassifier = 'menu-smoke'
+        manifest { attributes 'FMLModType': 'MOD' }
+    }
+    dependencies { localRuntime files(probeJar) }
+    loom.runs.named('client') {
+        runDir('run/menu-smoke')
+        vmArg '-Dcelestial_nail.menuSmoke=true'
+    }
+    tasks.named('runClient') {
+        dependsOn probeJar
+        doFirst {
+            def config = file('run/menu-smoke/config')
+            config.mkdirs()
+            new File(config, 'embeddium-mixins.properties').text = 'mixin.features.render.gui.debug=false\nmixin.features.render.immediate.buffer_builder.fast_delegate=false\n'
+            new File(config, 'oculus.properties').text = 'enableShaders=false\n'
+        }
+    }
+}

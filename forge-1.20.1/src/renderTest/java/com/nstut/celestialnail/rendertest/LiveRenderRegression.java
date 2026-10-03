@@ -66,13 +66,39 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
             new Scene("outside-fade-control", 1, (byte)0, 300, -1, -1, 230, 128, "outside-fade"),
             new Scene("missing-draw-control", 1, (byte)0, 300, -1, -1, 90, 128, "suppress"),
             new Scene("lost-final-composite-control", 1, (byte)0, 300, -1, -1, 90, 128, "erase-composite"),
-            new Scene("missing-tracking-control", 1, (byte)0, 300, -1, -1, 90, 128, "untrack"));
+            new Scene("missing-tracking-control", 1, (byte)0, 300, -1, -1, 90, 128, "untrack"),
+            new Scene("cinematic-impact-frame", 1, (byte)2, 300, 0, -1, 90, 128, "none"),
+            new Scene("cinematic-sequence-white", 1, (byte)2, 300, 2, -1, 90, 128, "none"),
+            new Scene("cinematic-sequence-invert", 1, (byte)2, 300, 4, -1, 90, 128, "none"),
+            new Scene("cinematic-sequence-gold", 1, (byte)2, 300, 8, -1, 90, 128, "none"),
+            new Scene("cinematic-sequence-ink", 1, (byte)2, 300, 10, -1, 90, 128, "none"),
+            new Scene("cinematic-sequence-recovery", 1, (byte)2, 300, 12, -1, 90, 128, "none"),
+            new Scene("cinematic-sequence-reduced", 1, (byte)2, 300, 4, -1, 90, 128, "none"),
+            new Scene("cinematic-sequence-off-control", 1, (byte)2, 300, 4, -1, 90, 128, "cinematic-off"),
+            new Scene("cinematic-delayed-impact-frame", 1, (byte)2, 300, 20, -1, 90, 128, "none"),
+            new Scene("cinematic-peripheral-frame", 1, (byte)2, 300, 0, -1, 90, 128, "none"),
+            new Scene("cinematic-camera-shake", 1, (byte)2, 300, 0, -1, 90, 128, "none"),
+            new Scene("cinematic-dust-below-ledge", 1, (byte)2, 300, 90, -1, 90, 128, "cinematic-ledge"),
+            new Scene("cinematic-dust-curtain", 1, (byte)2, 300, 20, -1, 90, 128, "none"),
+            new Scene("cinematic-lingering", 1, (byte)3, 2300, 2000, -1, 40, 128, "none"),
+            new Scene("cinematic-dust-occluded-control", 1, (byte)2, 300, 20, -1, 90, 128, "cinematic-occluded"),
+            new Scene("cinematic-expired-impact-control", 1, (byte)2, 700, 300, -1, 90, 128, "cinematic-control"),
+            new Scene("cinematic-disabled-control", 1, (byte)2, 300, 0, -1, 90, 128, "cinematic-disabled")).stream().filter(scene -> {
+                String filter=System.getProperty("celestial_nail.renderRegression.filter","");
+                return filter.isEmpty() || scene.name.equals(filter);
+            }).toList();
     private boolean worldRequested, setupStarted, done, shaders;
     private int index, stage, waited, failures, entityId;
     private String worldName;
     private Scene scene;
     private CompletableFuture<Void> setup;
     private NativeImage hiddenA, hiddenB;
+    private long startCinematics;
+    private boolean cinematicScene() {return scene.name.startsWith("cinematic-");}
+    private double maxCameraYawDelta, maxCameraPitchDelta;
+    private boolean sequenceOnly() {return scene.name.startsWith("cinematic-sequence-");}
+    private boolean isolatedDust() {return scene.name.equals("cinematic-dust-below-ledge");}
+    private boolean delayedImpact() {return scene.name.equals("cinematic-delayed-impact-frame");}
     private long startRenders, startVertices, startApplies, startWrong, startBlend, startColor, startBody, startBodyDepth;
     private float[] hiddenDepth, frameDepth;
     private double cameraY;
@@ -147,9 +173,11 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         boolean nextShaders = index >= scenes.size();
         if (index == 0 || shaders != nextShaders) { setShaderMode(nextShaders); shaders = nextShaders; }
         setupStarted = true;
-        stage = 0; waited = 0;
-        RenderRegressionHooks.hideNail = true;
+        stage = 0; waited = 0; maxCameraYawDelta = maxCameraPitchDelta = 0;
+        RenderRegressionHooks.hideNail = !cinematicScene() || delayedImpact() || isolatedDust() || sequenceOnly();
+        RenderRegressionHooks.hideCinematics = true;
         float height = CelestialNailVisuals.height(scene.scale);
+        int fixturePower=scene.name.contains("dust")?32:4;
         double target = scene.tipY + height * .5;
         if (scene.name.equals("portal-opening")) target = scene.tipY + height * 1.5;
         if (scene.name.equals("emerging")) target = scene.tipY + (CelestialNailVisuals.portalHeight(height)
@@ -157,7 +185,13 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         cameraY = target + (scene.name.equals("portal-opening") ? height * .4 : 0);
         if (scene.name.equals("idle-underneath") || scene.name.equals("cloud-overlap")) cameraY = scene.tipY - 60;
         pitch = (float) Math.toDegrees(Math.atan2(cameraY - target, scene.distance));
-        yaw = scene.fault.equals("offscreen") ? 180 : 0;
+        yaw = scene.fault.equals("offscreen") || scene.name.equals("cinematic-peripheral-frame") ? 180 : 0;
+        if(scene.name.contains("dust")) {
+            double origin=scene.tipY+CataclysmTimeline.pierceDepth(fixturePower,height,scene.impactAge);
+            cameraY=origin+14;
+            pitch=(float)Math.toDegrees(Math.atan2(6,scene.distance));
+        }
+        if(isolatedDust()) { cameraY-=94; pitch=0; }
         var server = mc.getSingleplayerServer();
         UUID playerId = mc.player.getUUID();
         setup = CompletableFuture.runAsync(() -> {
@@ -175,26 +209,28 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
             level.setWeatherParameters(0, 100000, false, false);
             // Remove the previous wall, then build a real opaque wall between camera and Nail.
             // Both reference and visible frames contain the wall; Nail pixels must remain absent.
-            for (int x = -16; x <= 16; x++) for (int y = 128; y <= 200; y++)
-                level.setBlock(new net.minecraft.core.BlockPos(x, y, -35),
-                        (scene.fault.equals("occluded") ? net.minecraft.world.level.block.Blocks.STONE
+            for (int wallZ : new int[]{-35,-70}) for (int x = -64; x <= 64; x++) for (int y = 128; y <= 200; y++)
+                level.setBlock(new net.minecraft.core.BlockPos(x, y, wallZ),
+                        ((wallZ==-35 && (scene.fault.equals("occluded") || scene.fault.equals("cinematic-ledge")) || wallZ==-70 && scene.fault.equals("cinematic-occluded")) ? net.minecraft.world.level.block.Blocks.STONE
                                 : net.minecraft.world.level.block.Blocks.AIR).defaultBlockState(), 3);
             player.setGameMode(GameType.SPECTATOR);
             player.teleportTo(level, 0, cameraY - player.getEyeHeight(), -scene.distance, yaw, pitch);
             CelestialNailEntity nail = CelestialNailForge.NAIL.get().create(level);
             if (nail == null) throw new IllegalStateException("Entity factory failed");
             nail.setPos(0, scene.tipY, 0);
-            nail.configure("render_fixture_" + index, 4);
+            nail.configure("render_fixture_" + index, fixturePower);
             nail.beginSummoning(scene.scale);
             CompoundTag tag = new CompoundTag();
             nail.saveWithoutId(tag);
-            tag.putByte("Phase", scene.phase);
-            tag.putLong("SummonTime", timestamp(scene.age));
-            tag.putLong("LaunchTime", timestamp(expectedLaunchAge()));
-            tag.putLong("ImpactTime", timestamp(scene.impactAge));
+            // An impact phase without a timestamp is upgraded as an old save.
+            // Start before impact so this fixture exercises a genuine transition.
+            tag.putByte("Phase", delayedImpact() ? (byte)0 : scene.phase);
+            tag.putLong("SummonTime", timestamp(scene.age - (delayedImpact() ? 8 : 0)));
+            tag.putLong("LaunchTime", timestamp(expectedLaunchAge() - (delayedImpact() ? 8 : 0)));
+            tag.putLong("ImpactTime", delayedImpact() ? -1 : timestamp(scene.impactAge));
             tag.putLong("CrumbleTime", timestamp(scene.crumbleAge));
             tag.putFloat("ImpactYExact", (float) scene.tipY + (scene.impactAge < 0 ? 0
-                    : CataclysmTimeline.pierceDepth(4, height, scene.impactAge)));
+                    : CataclysmTimeline.pierceDepth(fixturePower, height, scene.impactAge)));
             tag.putBoolean("BlastCleared", true);
             nail.load(tag);
             nail.setCustomNameVisible(false);
@@ -207,15 +243,20 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
     @Override public void beforeFrame() {
         if (done || !setupStarted || setup == null || !setup.isDone() || mc.player == null || mc.level == null) return;
         if (setup.isCompletedExceptionally()) { abort("Server fixture setup failed"); return; }
-        mc.level.setGameTime(CLOCK);
+        mc.level.setGameTime(CLOCK + (delayedImpact() && stage == 2 ? 8 : 0));
         mc.player.setPos(0, cameraY - mc.player.getEyeHeight(), -scene.distance);
         mc.player.xo = mc.player.xOld = mc.player.getX();
         mc.player.yo = mc.player.yOld = mc.player.getY();
         mc.player.zo = mc.player.zOld = mc.player.getZ();
         mc.player.setYRot(yaw); mc.player.yRotO = yaw;
         mc.player.setXRot(pitch); mc.player.xRotO = pitch;
+        RenderRegressionHooks.testCameraShake=scene.name.equals("cinematic-camera-shake") && stage==2;
         CelestialNailAtmosphere.shake = 0;
         CelestialNailAtmosphere.flash = 0;
+        com.nstut.celestialnail.client.CinematicSettings.impactMode=scene.name.endsWith("sequence-off-control")?0:scene.name.endsWith("sequence-reduced")?1:2;
+        com.nstut.celestialnail.client.CinematicSettings.impactIntensity=scene.fault.equals("cinematic-disabled")?0:.8F;
+        com.nstut.celestialnail.client.CinematicSettings.dustSamples=scene.fault.equals("cinematic-disabled") || delayedImpact() || sequenceOnly()?0:16;
+        com.nstut.celestialnail.client.CinematicSettings.lingering=!scene.fault.equals("cinematic-disabled");
         // Random particles cannot stand in for the actual Nail mesh in an image assertion.
         mc.particleEngine.setLevel(mc.level);
         if (scene.fault.equals("untrack") && stage >= 2) mc.level.removeEntity(entityId, Entity.RemovalReason.DISCARDED);
@@ -224,12 +265,30 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
     @Override public void afterFrame() {
         if (done || !setupStarted || setup == null || !setup.isDone() || mc.player == null || mc.level == null) return;
         try {
+            if(RenderRegressionHooks.testCameraShake) {
+                var camera=mc.gameRenderer.getMainCamera();
+                maxCameraYawDelta=Math.max(maxCameraYawDelta,Math.abs(camera.getYRot()-yaw));
+                maxCameraPitchDelta=Math.max(maxCameraPitchDelta,Math.abs(camera.getXRot()-pitch));
+            }
+            if (stage == 10) {
+                // Deliver through real entity metadata, observe it, then simulate
+                // eight catch-up game ticks before the first visible render.
+                var nail = (CelestialNailEntity)mc.level.getEntity(entityId);
+                if (nail == null || nail.impactAge(0) < 0) {
+                    if (++waited > 600) throw new IllegalStateException("Delayed impact metadata was not delivered");
+                    return;
+                }
+                CelestialNailAtmosphere.track(nail);
+                RenderRegressionHooks.hideCinematics = false;
+                stage = 2; waited = 0;
+                return;
+            }
             // Wait for real spawn/tracking and world render warm-up; absence fails, never skips.
             if (stage == 0 && mc.level.getEntity(entityId) == null && !scene.fault.equals("outside-fade")) {
                 if (++waited > 600) throw new IllegalStateException("Server Nail was not tracked by client");
                 return;
             }
-            if (++waited < (stage == 0 ? 90 : 45)) return;
+            if (++waited < (stage == 0 ? 90 : stage == 2 && delayedImpact() ? 1 : 45)) return;
             waited = 0;
             if (stage == 0) {
                 hiddenA = Screenshot.takeScreenshot(mc.getMainRenderTarget());
@@ -237,7 +296,9 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
             } else if (stage == 1) {
                 hiddenB = Screenshot.takeScreenshot(mc.getMainRenderTarget());
                 hiddenDepth = scene.name.equals("cloud-overlap") ? frameDepth : null;
-                RenderRegressionHooks.hideNail = scene.fault.equals("suppress");
+                RenderRegressionHooks.hideNail = delayedImpact() || isolatedDust() || sequenceOnly() || !cinematicScene() && scene.fault.equals("suppress");
+                RenderRegressionHooks.hideCinematics = delayedImpact() || !cinematicScene();
+                startCinematics=com.nstut.celestialnail.client.ProceduralCinematicPass.draws;
                 startRenders = RenderRegressionHooks.renders;
                 startVertices = RenderRegressionHooks.vertices;
                 startApplies = RenderRegressionHooks.applies;
@@ -247,6 +308,24 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
                 startBody = RenderRegressionHooks.bodyDraws;
                 startBodyDepth = RenderRegressionHooks.bodyDepthDisabled;
                 stage = 2;
+                if (delayedImpact()) {
+                    stage = 10;
+                    var server = mc.getSingleplayerServer();
+                    server.execute(() -> {
+                        // Keep receipt age consistent with this fixture's frozen
+                        // render clock, including ticks between metadata delivery
+                        // and the next render callback.
+                        server.getWorldData().overworldData().setGameTime(CLOCK);
+                        server.getPlayerList().broadcastAll(new net.minecraft.network.protocol.game.ClientboundSetTimePacket(
+                                CLOCK, server.overworld().getDayTime(), false));
+                        var nail = (CelestialNailEntity)server.overworld().getEntity(entityId);
+                        var tag = new CompoundTag();
+                        nail.saveWithoutId(tag);
+                        tag.putByte("Phase", scene.phase);
+                        tag.putLong("ImpactTime", CLOCK - 12);
+                        nail.load(tag);
+                    });
+                }
             } else {
                 if (scene.fault.equals("erase-composite")) {
                     // Deliberately lose only the final visible contribution after real draw calls.
@@ -275,7 +354,7 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
                     int delta = Math.abs(((rgbA >> (channel * 8)) & 255) - ((rgbB >> (channel * 8)) & 255));
                     energy += delta; largest = Math.max(largest, delta);
                 }
-                if (largest > 8) changed++;
+                if (largest > (scene.name.equals("cinematic-lingering") ? 2 : 8)) changed++;
                 pixels++;
             }
         return new Diff(changed, energy, pixels);
@@ -366,6 +445,7 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         Object api = apiType.getMethod("getInstance").invoke(null);
         boolean activeShaders = (boolean) apiType.getMethod("isShaderPackInUse").invoke(api);
         Diff noise = diff(hiddenA, hiddenB), signal = diff(hiddenB, visible);
+        long cinematics=com.nstut.celestialnail.client.ProceduralCinematicPass.draws-startCinematics;
         long renders = RenderRegressionHooks.renders - startRenders;
         long vertices = RenderRegressionHooks.vertices - startVertices;
         long applies = RenderRegressionHooks.applies - startApplies;
@@ -377,25 +457,30 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         boolean visiblePixels = signal.changed > Math.max(40, noise.changed * 3)
                 && signal.energy > Math.max(2000, noise.energy * 3);
         double brightness=changedPixelBrightness(hiddenB, visible);
-        boolean expectedVisible = scene.fault.equals("none");
+        boolean expectedVisible = scene.fault.equals("none") || isolatedDust();
         boolean tracked = mc.level.getEntity(entityId) instanceof CelestialNailEntity;
         List<String> violations = new ArrayList<>();
         if (expectedVisible) {
             if (!tracked) violations.add("MISSING_TRACKING");
-            if (renders == 0) violations.add("NO_RENDER");
-            if (vertices == 0) violations.add("NO_VERTICES");
-            if (applies == 0) violations.add("NO_SHADER_APPLY");
+            if (!cinematicScene() && renders == 0) violations.add("NO_RENDER");
+            if (!cinematicScene() && vertices == 0) violations.add("NO_VERTICES");
+            if (!cinematicScene() && applies == 0) violations.add("NO_SHADER_APPLY");
             if (wrong > 0) violations.add("WRONG_PROGRAM");
             if (blend > 0) violations.add("BLENDING_DISABLED");
             if (color > 0) violations.add("COLOR_WRITES_DISABLED");
             if (!visiblePixels) violations.add("FINAL_IMAGE_MISSING");
-            if (scene.age >= CelestialNailVisuals.OPEN_TICKS && (body == 0 || depthDisabled > 0)) violations.add("BODY_DEPTH_MISSING");
+            if(cinematicScene() && cinematics<=0) violations.add("CINEMATIC_NOT_COMPOSITED");
+            if (!cinematicScene() && scene.age >= CelestialNailVisuals.OPEN_TICKS && (body == 0 || depthDisabled > 0)) violations.add("BODY_DEPTH_MISSING");
             if (scene.name.equals("embedded-dark") && brightness < 100) violations.add("DARK_BODY");
         } else {
             if (visiblePixels) violations.add("CONTROL_FALSE_POSITIVE");
             if ((scene.fault.equals("erase-composite") || scene.fault.equals("occluded")) && (renders == 0 || vertices == 0 || applies == 0)) violations.add("CONTROL_NOT_DRAWN");
             if (scene.fault.equals("untrack") && tracked) violations.add("CONTROL_STILL_TRACKED");
         }
+        if(scene.fault.equals("cinematic-occluded") && cinematics<=0) violations.add("OCCLUSION_PASS_NOT_EXERCISED");
+        if((scene.fault.equals("cinematic-control") || scene.fault.equals("cinematic-disabled") || scene.fault.equals("cinematic-off")) && cinematics>0) violations.add("CINEMATIC_REPLAYED");
+        if(scene.name.equals("cinematic-camera-shake") && (maxCameraYawDelta<.1 || maxCameraPitchDelta<.1))
+            violations.add("CAMERA_DID_NOT_SHAKE");
         Map<String,Object> lifecycle = new java.util.LinkedHashMap<>();
         if (tracked && mc.level.getEntity(entityId) instanceof CelestialNailEntity nail) {
             lifecycle.put("summonAge", nail.summonAge(0)); lifecycle.put("launchAge", nail.launchAge(0));
@@ -420,6 +505,8 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
         hiddenB.writeToFile(output.resolve(name + "-hidden.png"));
         visible.writeToFile(output.resolve(name + "-visible.png"));
         Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("cinematicDraws",cinematics);
+        result.put("maxCameraYawDelta",maxCameraYawDelta); result.put("maxCameraPitchDelta",maxCameraPitchDelta);
         result.put("case", name); result.put("passed", passed); result.put("expectedVisible", expectedVisible);
         result.put("shaderPackInUse", activeShaders);
         result.put("lifecycle", lifecycle); result.put("bodyDraws", body); result.put("bodyDepthDisabled", depthDisabled);
@@ -443,6 +530,7 @@ public final class LiveRenderRegression implements RenderRegressionHooks.Driver 
     private void finish() throws Exception {
         done = true;
         RenderRegressionHooks.hideNail = false;
+        RenderRegressionHooks.hideCinematics = false;
         writeReport(true);
         LOG.info("[NailLiveTest] COMPLETE cases={} failures={}", results.size(), failures);
         mc.stop();

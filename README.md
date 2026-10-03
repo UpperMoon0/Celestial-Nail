@@ -13,7 +13,7 @@ This mod interprets that imagery as a summonable, persistent structure with a st
 - **A persistent monument:** a 72-block-tall Nail at default scale, with a tip-first emergence animation and a floating sky portal.
 - **Independent size and power:** choose the visual scale separately from the crater radius.
 - **A staged strike:** downward acceleration, an expanding destruction wave, entity damage and deep embedding.
-- **Cinematic effects:** flashes, a light column, procedural shockwave, dust, fragments, sound and camera effects.
+- **Cinematic effects:** a synchronized 750 ms impact sequence, a depth-aware procedural dust curtain, a light column, shockwave, fragments, sound, camera effects and lingering crystal presence. [Local cinematic controls](docs/REFERENCE.md#client-cinematic-preferences) let each player adjust flash, shake and dust.
 - **Saved progress:** Nails and their strike stages persist across world saves; completed impacts do not restart on reload.
 - **Controlled removal:** an administrator can cancel further damage and clearing, followed by a harmless crumble animation.
 
