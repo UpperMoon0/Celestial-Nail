@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tempfile
 import uuid
 import zipfile
 from runtime_artifacts import COMPAT, EMBEDDIUM, ROOT, prepare
@@ -79,6 +80,33 @@ def dependencies(target):
     if loader == "fabric": names += ["fabric-api-" + target, "architectury-api-" + target]
     return paths + [prepare(COMPAT[name]) for name in names]
 
+def install_runtime(target, launcher, java):
+    from minecraft_launcher_lib import install, mod_loader, vanilla_launcher
+    loader, game = target.split("-", 1)
+    loader_version = TARGETS[target]
+    installer = mod_loader.get_mod_loader(loader)
+    version = installer.get_installed_version(game, loader_version)
+    if loader != "neoforge":
+        installer.install(game, launcher, loader_version=loader_version, java=java)
+        return version
+
+    # The generic installer checks the mutable global version catalogue even
+    # when a loader version is supplied. Use the pinned official installer and
+    # validate its embedded game/version contract instead of that discovery API.
+    installer_path = prepare(COMPAT["installer-" + target]).resolve()
+    with zipfile.ZipFile(installer_path) as jar:
+        profile = json.loads(jar.read("install_profile.json"))
+    if profile.get("minecraft") != game or profile.get("version") != version:
+        raise ValueError("Pinned NeoForge installer does not match " + target + " / " + loader_version)
+    launcher = Path(launcher).resolve()
+    install.install_minecraft_version(game, launcher)
+    vanilla_launcher.ensure_vanilla_launcher_profiles_exists(launcher)
+    with tempfile.TemporaryDirectory(prefix="nail-neoforge-install-") as directory:
+        subprocess.run([str(java), "-jar", str(installer_path), "--install-client", str(launcher)],
+                       cwd=directory, check=True)
+    install.install_minecraft_version(version, launcher)
+    return version
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", choices=TARGETS, action="append")
@@ -101,7 +129,7 @@ def main():
         receipt = launcher / ("installed-" + target + "-" + TARGETS[target] + ".txt")
         if not receipt.exists() or not (launcher / "versions" / version / (version + ".json")).exists():
             print("Installing", target, flush=True)
-            installer.install(game, launcher, loader_version=TARGETS[target], java=args.java)
+            install_runtime(target, launcher, args.java)
             receipt.write_text(version + "\n")
         if args.prepare_only: continue
         if not args.skip_build:

@@ -171,6 +171,12 @@ See [the development setup](CONTRIBUTING.md#local-development). The runner selec
 the configured Boom version and the current Nail version's exact fixture filename;
 older artifacts in `build/libs` do not affect selection.
 
+NeoForge 1.21.1 uses the official 21.1.228 installer pinned by SHA-512 in
+`tools/compat-artifacts.json`. The runner checks its embedded Minecraft and loader
+versions before installation, avoiding the mutable NeoForge version catalogue
+that intermittently rejected 1.21.1 in CI. Update the installer pin together with
+the runner's loader version when changing the tested runtime.
+
 Install `python -m pip install -r tools/compat-requirements.txt`, set `JAVA_HOME`
 to Java 21, and run `python tools/run_sodium_extras_compat.py`. Use
 `--target fabric-1.21.1` (or any target in the matrix) for one loader. On a headless
