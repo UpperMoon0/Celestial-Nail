@@ -1,4 +1,9 @@
 {
+  "installer-neoforge-1.21.1": {
+    "path": ".dependencies/compat/neoforge-21.1.228-installer.jar",
+    "url": "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.228/neoforge-21.1.228-installer.jar",
+    "sha512": "81a874ff51e0fe0ef74362674e316adeebbcfe094128939a2b9ed57ea8e693f04b358942ddbe2ddb7a043a384e760813b6945186f8beeace25c5132144ea8b46"
+  },
   "extras-fabric-1.21.1": {
     "path": ".dependencies/compat/sodiumextras-fabric-1.0.8-1.21.1.jar",
     "url": "https://cdn.modrinth.com/data/vqqx0QiE/versions/3Smu12Iu/sodiumextras-fabric-1.0.8-1.21.1.jar",
