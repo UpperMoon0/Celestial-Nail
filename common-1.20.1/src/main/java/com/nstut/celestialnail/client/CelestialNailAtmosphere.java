@@ -22,22 +22,28 @@ public final class CelestialNailAtmosphere {
         CelestialNailEntity nail;
         Vec3 center;
         long impact=-1;
-        boolean boom, charge, crack, crumbling;
+        boolean boom, crack, closing, crumbling;
         CelestialNailAtmosphereSound drone;
+        final com.nstut.celestialnail.ImpactPresentationClock pulse=new com.nstut.celestialnail.ImpactPresentationClock();
         Echo(CelestialNailEntity nail) { this.nail=nail; center=nail.position(); }
     }
     private CelestialNailAtmosphere() {}
     public static void track(CelestialNailEntity nail) {
         Minecraft mc=Minecraft.getInstance();
         resetWorld(mc.level);
+        CinematicSettings.load(mc.gameDirectory.toPath());
         CelestialNailPortalSound.tickEntity(nail);
         Echo echo=ECHOES.computeIfAbsent(nail.getUUID(), id->new Echo(nail));
+        // A newly constructed client entity has idle defaults until its metadata arrives.
+        // Only a fully identified Nail may arm the late-delivery grace.
+        if(!nail.nailId().isEmpty()) echo.pulse.observe(nail.impactAge(0));
         echo.nail=nail; echo.center=nail.impactAge(0)>=0?nail.impactOrigin():nail.position();
         if (nail.impactAge(0)>=0) echo.impact=nail.level().getGameTime()-(long)nail.impactAge(0);
     }
     private static void resetWorld(Object current) {
         if(world==current) return;
         ECHOES.values().forEach(e->{if(e.drone!=null)e.drone.finish();});
+        ProceduralCinematicPass.invalidate();
         ECHOES.clear();world=current; darkness=flash=shake=muffle=0;farPlane=0;
     }
     public static float visibility(double x,double z) {
@@ -71,6 +77,11 @@ public final class CelestialNailAtmosphere {
             if(impact>CataclysmTimeline.AFTERMATH_TICKS&&!n.isCrumbling()) {
                 farPlane=Math.max(farPlane,Math.abs(n.getY()+h-mc.player.getY())+128);
                 if(e.drone!=null){e.drone.finish();e.drone=null;}
+                float linger=CinematicSettings.lingering ? com.nstut.celestialnail.CinematicTimeline.lingering(distance,impact) : 0;
+                muffle=Math.max(muffle,linger*.35F);
+                if(linger>.001F && now%240==Math.floorMod(n.getId(),240)) sound("crystal_creak",linger*.8F);
+                if(linger>.001F && now%12==Math.floorMod(n.getId(),12))
+                    particle(ParticleTypes.END_ROD,n.getX()+random(h*.08),n.getY()+RANDOM.nextDouble()*h,n.getZ()+random(h*.08),0,.008,0);
                 continue;
             }
             if(n.isCrumbling()) {
@@ -94,7 +105,7 @@ public final class CelestialNailAtmosphere {
                 if(e.drone==null) { e.drone=new CelestialNailAtmosphereSound("presence",true);mc.getSoundManager().play(e.drone); }
                 e.drone.gain=presence*(launch>=24?0:.65F);
                 if(!e.crack&&age<30) {e.crack=true;sound("sky_crack",near*.75F);}
-                if(!e.charge&&launch>=0&&launch<24) {e.charge=true;sound("launch_charge",near);}
+                if(!e.closing&&launch>=0&&launch<24) {e.closing=true;sound("portal_close",near);}
                 if(launch>=24&&launch<30) muffle=Math.max(muffle,near*.95F);
                 if(launch<0&&now%160==Math.floorMod(n.getId(),160)) sound("crystal_creak",near*.35F);
                 if(launch<24) {
@@ -111,8 +122,8 @@ public final class CelestialNailAtmosphere {
                 if(impact<28)farPlane=Math.max(farPlane,Math.abs(e.center.y+h*5-mc.player.getY())+128);
                 float after=CataclysmTimeline.aftermath(impact),arrival=CataclysmTimeline.arrival(distance);
                 darkness=Math.max(darkness,near*.26F*after);
-                flash=Math.max(flash,near*.7F*Math.max(0,1-impact/10));
-                shake=Math.max(shake,near*CataclysmTimeline.shake(impact-arrival));
+                // The impact frame is sampled per render frame by the procedural compositor.
+                shake=Math.max(shake,near*CataclysmTimeline.shake(impact-arrival)*CinematicSettings.shakeIntensity);
                 muffle=Math.max(muffle,near*after*.4F);
                 if(!e.boom&&impact>=arrival) { e.boom=true;if(impact<arrival+20)sound("impact_boom",near); }
                 if(impact>arrival+80&&now%150==Math.floorMod(n.getId(),150)) sound("aftershock",near*.45F*after);
@@ -136,6 +147,62 @@ public final class CelestialNailAtmosphere {
                 }
             }
         }
+    }
+    /** Sample at camera setup so terrain work cannot consume the shake between ticks. */
+    public static float cameraShake() {
+        if(RenderRegressionHooks.ACTIVE && !RenderRegressionHooks.testCameraShake) return 0;
+        Minecraft mc=Minecraft.getInstance();
+        if(mc.level==null || mc.player==null || world!=mc.level || mc.isPaused()) return 0;
+        float strength=0;
+        long nanos=System.nanoTime();
+        for(Echo e:ECHOES.values()) {
+            var n=e.nail;
+            if(n.isRemoved() || n.isCrumbling() || n.impactAge(0)<0) continue;
+            double distance=mc.player.getEyePosition().distanceTo(e.center);
+            float near=com.nstut.celestialnail.CinematicTimeline.proximity(distance,640)*visibility(e.center.x,e.center.z);
+            float age=e.pulse.age(nanos,n.impactAge(0));
+            strength=Math.max(strength,near*com.nstut.celestialnail.CinematicTimeline.cameraShake(age,distance));
+        }
+        return strength*(CinematicSettings.impactMode==0?0:CinematicSettings.impactMode==1?.35F:1)*CinematicSettings.shakeIntensity*mc.options.screenEffectScale().get().floatValue();
+    }
+    /** Independently samples synchronized entity clocks, including when the Nail is outside the view. */
+    public static ProceduralCinematicPass.Frame cinematic(float partial, Vec3 camera, Vec3 forward) {
+        Minecraft mc=Minecraft.getInstance();
+        if(mc.level==null || mc.player==null || world!=mc.level)
+            return new ProceduralCinematicPass.Frame(0,0,-1,0,0,0,0,0,0,0,-1,0,0,0,0);
+        float flashStrength=0, atmosphere=0, best=0, pulseAge=-1;
+        Vec3 impactCenter=Vec3.ZERO;
+        Echo selected=null;
+        float selectedAge=-1, selectedDust=0;
+        double range=mc.options.getEffectiveRenderDistance()*16.0;
+        float accessibility=mc.options.screenEffectScale().get().floatValue();
+        for(Echo e:ECHOES.values()) {
+            CelestialNailEntity n=e.nail;
+            if(n.isRemoved() || n.isCrumbling()) continue;
+            float age=n.impactAge(partial);
+            if(age<0) continue;
+            float visible=CataclysmTimeline.horizontalFade(Math.hypot(e.center.x-camera.x,e.center.z-camera.z),range);
+            double distance=camera.distanceTo(e.center);
+            float near=com.nstut.celestialnail.CinematicTimeline.proximity(distance,640)*visible;
+            Vec3 direction=e.center.add(0,n.nailHeight()*.25,0).subtract(camera).normalize();
+            float facing=(float)Math.max(0,forward.dot(direction));
+            float presentation=e.pulse.age(System.nanoTime(),age);
+            float pulse=com.nstut.celestialnail.ImpactSequence.strength(presentation,CinematicSettings.impactMode)
+                    *near*(.65F+.35F*facing)*CinematicSettings.impactIntensity*accessibility*1.5F;
+            if(pulse>flashStrength) {flashStrength=pulse;pulseAge=presentation;impactCenter=e.center.subtract(camera);}
+            if(CinematicSettings.lingering) atmosphere=Math.max(atmosphere,
+                    com.nstut.celestialnail.CinematicTimeline.lingering(distance,age)*visible*accessibility);
+            float dust=CinematicSettings.dustSamples==0?0:com.nstut.celestialnail.CinematicTimeline.dust(age)*visible;
+            float score=dust/(1+(float)distance/256);
+            // A fixed-cost local veil; overlapping events use the strongest volume, never stack pulses.
+            if(score>best) {best=score;selected=e;selectedAge=age;selectedDust=dust;}
+        }
+        if(selected==null) return new ProceduralCinematicPass.Frame(flashStrength,0,-1,0,0,0,0,0,atmosphere,0,pulseAge,CinematicSettings.impactMode,(float)impactCenter.x,(float)impactCenter.y,(float)impactCenter.z);
+        Vec3 center=selected.center.subtract(camera);
+        return new ProceduralCinematicPass.Frame(flashStrength,
+                selectedDust,selectedAge,
+                selected.nail.power(),selected.nail.nailHeight(),(float)center.x,(float)center.y,(float)center.z,
+                atmosphere,CinematicSettings.dustSamples,pulseAge,CinematicSettings.impactMode,(float)impactCenter.x,(float)impactCenter.y,(float)impactCenter.z);
     }
     private static double random(double range) {return (RANDOM.nextDouble()*2-1)*range;}
     private static void particle(net.minecraft.core.particles.ParticleOptions type,double x,double y,double z,double vx,double vy,double vz) {

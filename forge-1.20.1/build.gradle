@@ -19,6 +19,7 @@ loom {
                 client()
                 vmArg "-Dmixin.env.disableRefMap=true"
                 vmArg "-Dcelestial_nail.renderRegression=true"
+                vmArg "-Dcelestial_nail.renderRegression.filter=${project.findProperty('renderTestFilter') ?: ''}"
                 runDir("run/render-regression")
                 programArg "--width"
                 programArg "854"
@@ -51,12 +52,18 @@ configurations {
 }
 
 dependencies {
+    // Embeddium is supplied by the shader runtime below; add Extras and its options API.
+    modLocalRuntime fileTree(dir: rootProject.file('.dependencies/dev-renderers/forge-1.20.1'), include: ['*.jar'])
+    forgeRuntimeLibrary fileTree(dir: rootProject.file('.dependencies/dev-renderer-libraries/forge-1.20.1'), include: ['*.jar'], exclude: ['fabric-api-base*.jar'])
+    // This event API references Minecraft classes and must live in the game layer.
+    modLocalRuntime fileTree(dir: rootProject.file('.dependencies/dev-renderer-libraries/forge-1.20.1'), include: ['fabric-api-base*.jar'])
     forge "net.minecraftforge:forge:$forge_version"
     modImplementation "dev.architectury:architectury-forge:$architectury_api_version"
 
     // Optional local shader mods are remapped for development and kept out of releases.
     modLocalRuntime fileTree(dir: rootProject.file('.dependencies/shaders'),
-            include: ['*.jar'])
+            include: ['*.jar'],
+            exclude: rootProject.file('.dependencies/dev-renderers/forge-1.20.1/embeddium-0.3.31+mc1.20.1-dev.jar').exists() ? ['embeddium-*.jar'] : [])
     // Loom does not expose Oculus's nested shader preprocessor on the dev classpath.
     forgeRuntimeLibrary fileTree(dir: rootProject.file('.dependencies/shader-libraries'), include: ['*.jar'])
 
@@ -127,3 +134,4 @@ tasks.named('runRenderRegression') {
 }
 
 apply from: rootProject.file('tools/gradle/sodium-extras-fixture.gradle')
+apply from: rootProject.file('tools/gradle/embeddium-menu-smoke.gradle')

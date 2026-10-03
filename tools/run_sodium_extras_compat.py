@@ -91,8 +91,9 @@ def main():
                             ":" + target + ":build", ":" + target + ":compatTestProductionJar",
                             "--console=plain", "--max-workers=2"], cwd=ROOT, check=True)
         nail = production_jar(target)
-        fixture = list((ROOT / target / "build/libs").glob("*-compat-test-dev.jar" if loader == "neoforge" else "*-compat-test.jar"))
-        if len(fixture) != 1: raise ValueError("Expected one separate compatibility fixture jar")
+        fixture_suffix = "-compat-test-dev.jar" if loader == "neoforge" else "-compat-test.jar"
+        fixture = [nail.with_name(nail.stem + fixture_suffix)]
+        if not fixture[0].is_file(): raise ValueError("Missing compatibility fixture for the current production version")
         boom_name = "perfomant_boom-" + (loader if game == "1.20.1" else target)
         boom = Path.home() / ".m2/repository/com/nstut" / boom_name / "1.1.3" / (boom_name + "-1.1.3.jar")
         with zipfile.ZipFile(nail) as jar:

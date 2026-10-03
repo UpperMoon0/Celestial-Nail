@@ -1,0 +1,9 @@
+# Unreleased
+
+- Add a synchronized 750 ms impact sequence with dark contact, white and inverted flashes, crystalline afterbeats and cold-blue recovery. Offer Full, Reduced and Off modes with local intensity and accessibility controls.
+- Start impact presentation and camera shake on the first rendered frame so game-tick catch-up does not consume them before presentation.
+- Add a full-resolution, depth-aware procedural dust curtain and rising plume. Heavy dust spreads outward and spills beneath high ledges, with bounded sampling, empty-region rejection and reduced noise work.
+- Keep a subtle cold grade, crystal motes and resonance around embedded Nails after the aftermath.
+- Replace the impact, portal-closing and aftershock sounds with supplied recordings; preserve full clip lengths and retire the generated closing/aftershock assets.
+- Install pinned render mods for development and restore Embeddium/Sodium Extras video settings in the Forge dev environment without packaging development dependencies.
+- Extend final-image checks with independent impact phases, Reduced/Off controls, delayed metadata, camera movement and dust viewed from below high ledges.

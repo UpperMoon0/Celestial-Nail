@@ -36,13 +36,16 @@ def prepare():
         destination.write_bytes(jcpp)
 
 
-def validate_report(report):
+def validate_report(report, only_case=None):
     cases = report.get("cases", [])
-    if report.get("complete") is not True or len(cases) != report.get("expectedCases") or len(cases) != 42:
+    if report.get("complete") is not True or len(cases) != report.get("expectedCases") or len(cases) != (2 if only_case else 76):
         raise ValueError("Live fixture incomplete; every scene and both shader modes are required")
     names = {"idle-near", "idle-close", "idle-inside", "idle-underneath", "embedded-dark", "cloud-overlap", "idle-far", "minimum-scale", "maximum-scale", "portal-opening", "emerging",
              "descending", "impact", "embedded-buried-anchor", "crumbling", "terrain-occluded-control", "offscreen-control",
-             "outside-fade-control", "missing-draw-control", "lost-final-composite-control", "missing-tracking-control"}
+             "outside-fade-control", "missing-draw-control", "lost-final-composite-control", "missing-tracking-control", "cinematic-impact-frame", "cinematic-sequence-white", "cinematic-sequence-invert", "cinematic-sequence-gold", "cinematic-sequence-ink", "cinematic-sequence-recovery", "cinematic-sequence-reduced", "cinematic-sequence-off-control", "cinematic-delayed-impact-frame", "cinematic-peripheral-frame", "cinematic-camera-shake", "cinematic-dust-below-ledge", "cinematic-dust-curtain", "cinematic-lingering", "cinematic-dust-occluded-control", "cinematic-expired-impact-control", "cinematic-disabled-control"}
+    if only_case:
+        if only_case not in names: raise ValueError("Unknown focused case")
+        names={only_case}
     expected = {mode + "-" + name for mode in ("vanilla", "complementary") for name in names}
     if {case["case"] for case in cases} != expected:
         raise ValueError("Duplicate or missing live test cases")
@@ -52,7 +55,16 @@ def validate_report(report):
     for case in cases:
         if case.get("shaderPackInUse") is not case["case"].startswith("complementary-"):
             raise ValueError("Actual shader-pack state does not match the tested mode")
+        if case["case"].endswith("cinematic-camera-shake") and any(case.get(key,0)<.1 for key in ("maxCameraYawDelta","maxCameraPitchDelta")):
+            raise ValueError("Camera shake never moved the real camera")
         control = case["case"].endswith("-control")
+        cinematic = "-cinematic-" in case["case"]
+        if cinematic:
+            draws=case.get("cinematicDraws",0)
+            if (not control or case["case"].endswith("dust-occluded-control")) and draws<=0:
+                raise ValueError("Cinematic final-image case never composited its shader")
+            if case["case"].endswith(("expired-impact-control","disabled-control","sequence-off-control")) and draws!=0:
+                raise ValueError("Expired or disabled cinematic replayed")
         if control:
             if case.get("visiblePixels") is not False or case.get("expectedVisible") is not False:
                 raise ValueError("An invisible control produced a false positive")
@@ -63,7 +75,7 @@ def validate_report(report):
         else:
             if not all(case.get(key) is True for key in ("expectedVisible", "visiblePixels", "tracked")):
                 raise ValueError("Visible fixture lacks final-composite pixel evidence")
-            if any(case.get(key, 0) <= 0 for key in ("renders", "vertices", "shaderApplies")):
+            if not cinematic and any(case.get(key, 0) <= 0 for key in ("renders", "vertices", "shaderApplies")):
                 raise ValueError("Visible fixture lacks real draw evidence")
             if case.get("wrongPrograms") != 0 or case.get("blendDisabled") != 0 or case.get("colorWritesDisabled") != 0:
                 raise ValueError("Unexpected shader program, color-write mask or blend state")
@@ -79,11 +91,11 @@ def validate_report(report):
             name=case["case"].split("-",1)[1]
             if name=="crumbling" and ages["crumbleAge"]<0:
                 raise ValueError("Crumble fixture used a missing crumble clock")
-            if name in ("descending","impact","embedded-dark","embedded-buried-anchor","crumbling") and ages["launchAge"]<0:
+            if (cinematic or name in ("descending","impact","embedded-dark","embedded-buried-anchor","crumbling")) and ages["launchAge"]<0:
                 raise ValueError("Post-launch fixture left its portal open")
-            if name in ("impact","embedded-dark","embedded-buried-anchor") and ages["impactAge"]<0:
+            if (cinematic or name in ("impact","embedded-dark","embedded-buried-anchor")) and ages["impactAge"]<0:
                 raise ValueError("Impact fixture used a missing-impact sentinel")
-        if not control and not case["case"].endswith("portal-opening"):
+        if not control and not cinematic and not case["case"].endswith("portal-opening"):
             if case.get("bodyDraws",0)<=0 or case.get("bodyDepthDisabled")!=0:
                 raise ValueError("Body did not render with depth writes")
         if case["case"].endswith(("idle-near","embedded-dark","cloud-overlap")):
@@ -99,16 +111,18 @@ def validate_report(report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--case", help="Run one named scene in both shader modes")
     args = parser.parse_args()
     prepare()
     if args.prepare_only:
         return 0
     wrapper = ROOT / ("gradlew.bat" if os.name == "nt" else "gradlew")
     command = [str(wrapper), ":forge-1.20.1:runRenderRegression", "--console=plain", "--no-daemon"]
+    if args.case: command.append("-PrenderTestFilter="+args.case)
     result = subprocess.run(command, cwd=ROOT)
     report_path = ROOT / "forge-1.20.1/run/render-regression/render-test-results.json"
     try:
-        cases = validate_report(json.loads(report_path.read_text(encoding="utf-8")))
+        cases = validate_report(json.loads(report_path.read_text(encoding="utf-8")),args.case)
     except (ValueError, OSError) as error:
         print("FAIL:", error, file=sys.stderr)
         return 1

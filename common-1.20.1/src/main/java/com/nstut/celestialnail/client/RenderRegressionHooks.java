@@ -11,6 +11,8 @@ public final class RenderRegressionHooks {
     }
     private static Driver driver;
     public static boolean hideNail;
+    public static boolean hideCinematics = true;
+    public static boolean testCameraShake;
     public static long renders, vertices, applies, wrongPrograms, blendDisabled, colorWritesDisabled, bodyDraws, bodyDepthDisabled;
     private RenderRegressionHooks() {}
 

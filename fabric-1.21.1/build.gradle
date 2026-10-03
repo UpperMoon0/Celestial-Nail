@@ -36,6 +36,8 @@ configurations {
 }
 
 dependencies {
+    // Local compatibility mods are remapped for development and excluded from releases.
+    modLocalRuntime fileTree(dir: rootProject.file('.dependencies/dev-renderers/fabric-1.21.1'), include: ['*.jar'])
     modImplementation "net.fabricmc:fabric-loader:$fabric_loader_version"
     modImplementation "net.fabricmc.fabric-api:fabric-api:$fabric_api_version"
     modImplementation "dev.architectury:architectury-fabric:$architectury_api_version"

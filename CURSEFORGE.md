@@ -18,9 +18,11 @@ The Nail descends, unleashes an expanding destruction wave, and remains embedded
 
 - **A divine presence:** 72 blocks tall at default scale, with an animated emergence and floating sky portal.
 - **Judgment of your choosing:** adjust the Nail’s size independently of its crater radius.
-- **An appropriately dramatic arrival:** flashes, a light column, shockwaves, dust, fragments, sound and camera effects.
-- **Consequences that persist:** Nails and their impact progress save with the world.
+- **An appropriately dramatic arrival:** a brief cold impact frame for nearby players, a rising dust curtain, a light column, shockwaves, fragments, sound and camera effects.
+- **Consequences that persist:** Nails and their impact progress save with the world. An embedded Nail retains a faint crystal resonance and quiet celestial atmosphere nearby.
 - **Mercy, technically:** cancel an active strike with a harmless crumble animation. Previously destroyed terrain remains destroyed. You are a god, not a backup service.
+
+Players can adjust impact-frame and camera-shake intensity, reduce or disable the dust curtain, and turn off the lingering atmosphere in `config/celestial-nail-cinematics.properties`. The impact frame also follows Minecraft's Distortion Effects setting. Restart the client after changing the file.
 
 ## Issue your decree
 

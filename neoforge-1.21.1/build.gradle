@@ -25,7 +25,16 @@ neoForge {
     version = rootProject.neoforge_version_1_21_1
 
     runs {
-        client { client() }
+        client {
+            client()
+            // Client-only local mods; no dependency leaks into publications or server runs.
+            def renderer = providers.gradleProperty('devRenderer').getOrElse('sodium')
+            if (!(renderer in ['sodium', 'embeddium'])) {
+                throw new GradleException('devRenderer must be sodium or embeddium')
+            }
+            // A real mods directory lets FML discover these as mods, not plain libraries.
+            gameDirectory = project.file(renderer == 'embeddium' ? 'run/client-embeddium' : 'run/client')
+        }
         smokeServer {
             server()
             gameDirectory = project.file('run/portal-smoke')
@@ -115,3 +124,6 @@ dependencies { implementation "com.nstut:perfomant_boom-neoforge-1.21.1:${rootPr
 repositories { mavenLocal(); mavenCentral() }
 
 apply from: rootProject.file('tools/gradle/sodium-extras-fixture.gradle')
+
+// Shared procedural client compositor; deliberately excluded from the pure common test module.
+sourceSets.main.java.srcDir rootProject.file('common-client/src/main/java')
