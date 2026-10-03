@@ -9,6 +9,7 @@ import subprocess
 import uuid
 import zipfile
 from runtime_artifacts import COMPAT, EMBEDDIUM, ROOT, prepare
+from release import properties
 
 TARGETS = {"forge-1.20.1": "47.4.0", "fabric-1.20.1": "0.18.4",
            "fabric-1.21.1": "0.18.4", "neoforge-1.21.1": "21.1.228"}
@@ -48,9 +49,26 @@ def validate_report(report, present):
             raise ValueError("Incorrect lifecycle/draw control: " + case["case"])
 
 def production_jar(target):
-    props = dict(line.split("=", 1) for line in (ROOT / "gradle.properties").read_text().splitlines()
-                 if "=" in line and not line.startswith("#"))
+    props = properties((ROOT / "gradle.properties").read_text(encoding="utf-8"))
     return ROOT / target / "build/libs" / ("celestial-nail-" + target + "-" + props["mod_version"] + ".jar")
+
+def runtime_artifact_paths(target, root=None, maven_repository=None):
+    root = ROOT if root is None else Path(root)
+    repository = Path.home() / ".m2/repository" if maven_repository is None else Path(maven_repository)
+    props = properties((root / "gradle.properties").read_text(encoding="utf-8"))
+    loader, game = target.split("-", 1)
+    nail = root / target / "build/libs" / ("celestial-nail-" + target + "-" + props["mod_version"] + ".jar")
+    suffix = "-compat-test-dev.jar" if loader == "neoforge" else "-compat-test.jar"
+    fixture = nail.with_name(nail.stem + suffix)
+    if not fixture.is_file():
+        raise ValueError("Missing compatibility fixture for the current production version: " + str(fixture))
+    boom_name = "perfomant_boom-" + (loader if game == "1.20.1" else target)
+    version = props["boom_version"]
+    boom = repository / "com/nstut" / boom_name / version / (boom_name + "-" + version + ".jar")
+    if not boom.is_file():
+        raise ValueError("Missing matching Boom artifact: " + str(boom)
+                         + "; publish the configured boom_version to Maven local (CONTRIBUTING.md#local-development)")
+    return nail, fixture, boom
 
 def dependencies(target):
     loader, game = target.split("-", 1)
@@ -90,12 +108,7 @@ def main():
             subprocess.run([str(ROOT / ("gradlew.bat" if os.name == "nt" else "gradlew")),
                             ":" + target + ":build", ":" + target + ":compatTestProductionJar",
                             "--console=plain", "--max-workers=2"], cwd=ROOT, check=True)
-        nail = production_jar(target)
-        fixture_suffix = "-compat-test-dev.jar" if loader == "neoforge" else "-compat-test.jar"
-        fixture = [nail.with_name(nail.stem + fixture_suffix)]
-        if not fixture[0].is_file(): raise ValueError("Missing compatibility fixture for the current production version")
-        boom_name = "perfomant_boom-" + (loader if game == "1.20.1" else target)
-        boom = Path.home() / ".m2/repository/com/nstut" / boom_name / "1.1.3" / (boom_name + "-1.1.3.jar")
+        nail, fixture, boom = runtime_artifact_paths(target)
         with zipfile.ZipFile(nail) as jar:
             if any("compattest/" in name for name in jar.namelist()): raise ValueError("Test driver leaked into release jar")
             if not any(name.endswith("SodiumExtrasEntityTypeMixin.class") for name in jar.namelist()): raise ValueError("Packaged compatibility hook missing")
@@ -104,7 +117,7 @@ def main():
             game_dir = run_root / target / (mode + "-" + uuid.uuid4().hex)
             (game_dir / "mods").mkdir(parents=True)
             (game_dir / "config").mkdir()
-            for mod in mods + [nail, fixture[0], boom] + ([extras] if present else []):
+            for mod in mods + [nail, fixture, boom] + ([extras] if present else []):
                 shutil.copyfile(mod, game_dir / "mods" / mod.name)
             (game_dir / "config/sodiumextras-client.toml").write_text(
                 '[embeddiumextras.performance.distanceCulling.entities]\nenable = true\ncullingMaxDistanceX = 4096\ncullingMaxDistanceY = 32\nwhitelist = ["minecraft:ghast"]\n')

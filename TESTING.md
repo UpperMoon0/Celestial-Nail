@@ -164,6 +164,13 @@ checks remain independently required.
 
 ## Sodium Extras compatibility regression (four applicable targets)
 
+First publish the Perfomant Boom revision matching Nail's `boom_version` in
+`gradle.properties` to Maven local for the targets you will test. In the Boom
+checkout, run `./gradlew buildAll publishToMavenLocal` (`gradlew.bat` on Windows).
+See [the development setup](CONTRIBUTING.md#local-development). The runner selects
+the configured Boom version and the current Nail version's exact fixture filename;
+older artifacts in `build/libs` do not affect selection.
+
 Install `python -m pip install -r tools/compat-requirements.txt`, set `JAVA_HOME`
 to Java 21, and run `python tools/run_sodium_extras_compat.py`. Use
 `--target fabric-1.21.1` (or any target in the matrix) for one loader. On a headless
@@ -363,7 +370,7 @@ The full-impact suspicious-sand, suspicious-gravel and dry-coral regressions fai
 
 ## Shared terrain dependency
 
-Publish the matching Perfomant Boom 1.1.3 artifacts to Maven local before these checks.
+Publish the Perfomant Boom version configured by `boom_version` to Maven local before these checks.
 All terrain mutation tests now exercise Boom's external API and mixins. The three passes
 and cursors no longer live in Nail; the entity keeps its existing persisted cursor fields.
 When iterating on Boom at the same version, refresh Nail's dependency cache with
