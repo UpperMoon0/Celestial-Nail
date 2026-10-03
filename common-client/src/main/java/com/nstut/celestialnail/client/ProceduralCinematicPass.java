@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.*;
-import static org.lwjgl.opengl.GL33C.*;
+import static org.lwjgl.opengl.GL32C.*;
 
 /** Isolated OpenGL compositor. Never replaces Minecraft/Iris shaders or their render targets.
  * Captures world depth before the hand/HUD clear, then composites after world post-processing.
@@ -70,7 +70,9 @@ public final class ProceduralCinematicPass {
             glColorMask(true, true, true, true);
             glUseProgram(program);
             glBindVertexArray(vao);
-            glBindSampler(0, 0); glBindSampler(1, 0);
+            if (ignored.samplerObjects) {
+                GL33C.glBindSampler(0, 0); GL33C.glBindSampler(1, 0);
+            }
             glUniform1i(uniform("Scene"), 0); glUniform1i(uniform("Depth"), 1);
             glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, depth);
             glUniformMatrix4fv(uniform("InverseViewProjection"), false, inverse);
@@ -171,6 +173,10 @@ public final class ProceduralCinematicPass {
     }
 
     private static final class State implements AutoCloseable {
+        // Check before touching GL state. The 3.2 baseline has no sampler objects;
+        // there the compositor's private textures provide their own filtering.
+        final boolean samplerObjects = GL.getCapabilities().OpenGL33
+                || GL.getCapabilities().GL_ARB_sampler_objects;
         final int read = glGetInteger(GL_READ_FRAMEBUFFER_BINDING), draw = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
         final int shader = glGetInteger(GL_CURRENT_PROGRAM), vertex = glGetInteger(GL_VERTEX_ARRAY_BINDING);
         final int unpack = glGetInteger(GL_PIXEL_UNPACK_BUFFER_BINDING);
@@ -186,7 +192,7 @@ public final class ProceduralCinematicPass {
             for (int i = 0; i < 2; i++) {
                 glActiveTexture(GL_TEXTURE0 + i);
                 textures[i] = glGetInteger(GL_TEXTURE_BINDING_2D);
-                samplers[i] = glGetInteger(GL_SAMPLER_BINDING);
+                if (samplerObjects) samplers[i] = glGetInteger(GL33C.GL_SAMPLER_BINDING);
             }
             glActiveTexture(active);
         }
@@ -194,7 +200,8 @@ public final class ProceduralCinematicPass {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, read); glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw);
             glUseProgram(shader); glBindVertexArray(vertex);
             for (int i = 0; i < 2; i++) {
-                glActiveTexture(GL_TEXTURE0 + i); glBindTexture(GL_TEXTURE_2D, textures[i]); glBindSampler(i, samplers[i]);
+                glActiveTexture(GL_TEXTURE0 + i); glBindTexture(GL_TEXTURE_2D, textures[i]);
+                if (samplerObjects) GL33C.glBindSampler(i, samplers[i]);
             }
             glActiveTexture(active);
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, unpack);
