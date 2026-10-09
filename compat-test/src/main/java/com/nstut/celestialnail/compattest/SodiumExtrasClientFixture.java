@@ -153,7 +153,7 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
   var entity=mc.level.getEntity(entityId);
   boolean tracked=entity instanceof CelestialNailEntity;
   float age=tracked?((CelestialNailEntity)entity).summonAge(0):-1;
-  boolean passed=tracked&&Math.abs(age-(grounded()?3000:300))<.01&&((CelestialNailEntity)entity).isEmbedded()==grounded()&&pixelVisible==expected&&(expected?renders>0:renders==0);
+  boolean passed=tracked&&Math.abs(age-(grounded()?3000:300))<.01&&((CelestialNailEntity)entity).isEmbedded()==grounded()&&pixelVisible==expected&&(expected?renders>0:scene.offscreen&&grounded()||renders==0);
   var result=new LinkedHashMap<String,Object>();
   result.put("case",scene.name);result.put("tracked",tracked);result.put("summonAge",age);result.put("embedded",tracked&&((CelestialNailEntity)entity).isEmbedded());
   result.put("expectedVisible",expected);result.put("visiblePixels",pixelVisible);result.put("changedPixels",pixels);

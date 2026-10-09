@@ -433,3 +433,8 @@ frustum rejection and Nail's own distance limit on the grounded state.
 scales and low/default/high powers in impact, embedded and crumbling phases on
 NeoForge 1.21.1. It checks surface-origin containment and the native culling bounds
 contract. The other game adapters receive the same correction and build coverage.
+
+Embedded impact bounds conservatively include the wide effect region, so an
+offscreen grounded body may still reach the renderer. That control requires zero
+visible final pixels; it permits renderer admission. Missing-draw controls require
+zero renderer calls, and every visible case requires both draws and visible pixels.

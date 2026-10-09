@@ -50,6 +50,14 @@ class CompatEvidenceTest(unittest.TestCase):
         case["embedded"] = False
         with self.assertRaises(ValueError): validate_report(report, True)
 
+    def test_grounded_offscreen_bounds_may_admit_a_draw_but_pixels_must_stay_hidden(self):
+        report = complete_report()
+        case = next(case for case in report["cases"] if case["case"] == "grounded-offscreen-control")
+        case["renders"] = 45
+        validate_report(report, True)
+        case["visiblePixels"] = True
+        with self.assertRaises(ValueError): validate_report(report, True)
+
     def test_complete_report(self):
         validate_report(complete_report(), True)
 

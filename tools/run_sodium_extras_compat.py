@@ -54,7 +54,7 @@ def validate_report(report, present):
         if any(case.get(key) is not value for key, value in
                (("passed", True), ("tracked", True), ("expectedVisible", expected), ("visiblePixels", expected))):
             raise ValueError("Invalid image evidence: " + case["case"])
-        if case.get("embedded") is not case["case"].startswith("grounded-") or abs(case.get("summonAge", -1) - (3000 if case["case"].startswith("grounded-") else 300)) > .01 or (case.get("renders", 0) > 0) is not expected:
+        if case.get("embedded") is not case["case"].startswith("grounded-") or abs(case.get("summonAge", -1) - (3000 if case["case"].startswith("grounded-") else 300)) > .01 or (case["case"] != "grounded-offscreen-control" and (case.get("renders", 0) > 0) is not expected):
             raise ValueError("Incorrect lifecycle/draw control: " + case["case"])
 
 def production_jar(target):
