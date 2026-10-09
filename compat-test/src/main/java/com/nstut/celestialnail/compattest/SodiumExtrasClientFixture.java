@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 /** A packaged client, integrated-server tracking, actual camera culling and final framebuffer RGB. */
 public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Driver {
  private static final long CLOCK=100000;
+ private static final int GROUND_RADIUS=192;
  private record Scene(String name,double x,double y,double z,boolean offscreen,boolean suppress) {}
  private static final List<Scene> SCENES=List.of(
   new Scene("horizontal-cutoff",0,180,-150,false,false),
@@ -31,13 +32,14 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
   new Scene("grounded-angle-left",-100,260,-100,false,false),
   new Scene("grounded-angle-right",100,260,-100,false,false),
   new Scene("grounded-offscreen-control",0,260,-150,true,false),
-  new Scene("grounded-missing-draw-control",0,260,-150,false,true));
+  new Scene("grounded-missing-draw-control",0,260,-150,false,true),
+  new Scene("grounded-terrain-occluded-control",0,360,-150,false,false));
  private final Minecraft mc=Minecraft.getInstance();
  private final Map<String,Object> report=new LinkedHashMap<>();
  private final List<Map<String,Object>> cases=new ArrayList<>();
  private final Path output=mc.gameDirectory.toPath().resolve("evidence");
  private final long started=System.nanoTime();
- private boolean requested,done,groundedAssertionsRun;
+ private boolean requested,done,groundedAssertionsRun,groundReady;
  private int index,stage,frames,entityId;
  private Scene scene;
  private float yaw,pitch;
@@ -101,9 +103,14 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
     tag.putByte("Phase",(byte)3);tag.putLong("LaunchTime",CLOCK-2000);
     tag.putLong("ImpactTime",CLOCK-1000);tag.putFloat("ImpactYExact",244.96F);
     tag.putBoolean("BlastCleared",true);
-    // A solid ground plane hides the buried body; only the exposed monument may draw.
-    for(int x=-24;x<=24;x++)for(int z=-24;z<=24;z++)
-     level.setBlock(new net.minecraft.core.BlockPos(x,244,z),net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(),2);
+    // Cover every camera-to-body sightline, not just the Nail's footprint.
+    // The final control raises the ground above all Nail geometry while keeping draws enabled.
+    boolean buried=scene.name.equals("grounded-terrain-occluded-control");
+    if(!groundReady||buried) {
+     for(int x=-GROUND_RADIUS;x<=GROUND_RADIUS;x++)for(int z=-GROUND_RADIUS;z<=GROUND_RADIUS;z++)
+      level.setBlock(new net.minecraft.core.BlockPos(x,buried?320:244,z),net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(),2);
+     groundReady=true;
+    }
    }
    nail.load(tag);nail.setCustomNameVisible(false);level.addFreshEntity(nail);entityId=nail.getId();
   },server);
@@ -138,23 +145,51 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
  }
  private static int changed(NativeImage a,NativeImage b) {
   if(a.getWidth()!=b.getWidth()||a.getHeight()!=b.getHeight())throw new AssertionError("Window resized");
+  return changed(a,b,a.getWidth()/3,a.getHeight()/6,a.getWidth()*2/3,a.getHeight()*5/6);
+ }
+ private static int changed(NativeImage a,NativeImage b,int left,int top,int right,int bottom) {
   int count=0;
-  for(int y=a.getHeight()/6;y<a.getHeight()*5/6;y++) for(int x=a.getWidth()/3;x<a.getWidth()*2/3;x++) {
+  for(int y=top;y<bottom;y++) for(int x=left;x<right;x++) {
    int av=a.getPixelRGBA(x,y),bv=b.getPixelRGBA(x,y),delta=0;
    for(int c=0;c<3;c++)delta=Math.max(delta,Math.abs(((av>>(8*c))&255)-((bv>>(8*c))&255)));
    if(delta>8)count++;
   }
   return count;
  }
+ // Project a narrow strip around the buried body's axis, well below the surface.
+ // All visible grounded cameras look at that axis; its x coordinate is image center.
+ private int[] buriedProbe(NativeImage image) {
+  double p=Math.toRadians(pitch), distance=Math.hypot(scene.x,scene.z);
+  double focal=image.getHeight()/(2*Math.tan(Math.toRadians(mc.options.fov().get())/2));
+  int[] ys=new int[2];int i=0;
+  for(double worldY:new double[]{205,225}) {
+   double dy=worldY-scene.y, depth=distance*Math.cos(p)-dy*Math.sin(p);
+   ys[i++]=(int)Math.round(image.getHeight()/2.0-focal*(distance*Math.sin(p)+dy*Math.cos(p))/depth);
+  }
+  int top=Math.max(0,Math.min(ys[0],ys[1])),bottom=Math.min(image.getHeight(),Math.max(ys[0],ys[1]));
+  return new int[]{image.getWidth()/2-3,top,image.getWidth()/2+4,bottom};
+ }
  private void evaluate(NativeImage visible) throws Exception {
   int noise=changed(hiddenA,hiddenB),pixels=changed(hiddenB,visible);
-  boolean pixelVisible=pixels>Math.max(80,noise*4+40),expected=!scene.offscreen&&!scene.suppress;
+  boolean pixelVisible=pixels>Math.max(80,noise*4+40),expected=!scene.name.endsWith("-control");
   long renders=SodiumExtrasTestHooks.renders-drawStart;
   var entity=mc.level.getEntity(entityId);
   boolean tracked=entity instanceof CelestialNailEntity;
   float age=tracked?((CelestialNailEntity)entity).summonAge(0):-1;
-  boolean passed=tracked&&Math.abs(age-(grounded()?3000:300))<.01&&((CelestialNailEntity)entity).isEmbedded()==grounded()&&pixelVisible==expected&&(expected?renders>0:scene.offscreen&&grounded()||renders==0);
+  boolean passed=tracked&&Math.abs(age-(grounded()?3000:300))<.01&&((CelestialNailEntity)entity).isEmbedded()==grounded()&&pixelVisible==expected&&(expected?renders>0:(scene.offscreen&&grounded()||scene.name.equals("grounded-terrain-occluded-control"))||renders==0);
   var result=new LinkedHashMap<String,Object>();
+  if(grounded()&&expected) {
+   int[] probe=buriedProbe(visible);
+   int probePixels=(probe[2]-probe[0])*Math.max(0,probe[3]-probe[1]);
+   int buriedNoise=changed(hiddenA,hiddenB,probe[0],probe[1],probe[2],probe[3]);
+   int buriedPixels=changed(hiddenB,visible,probe[0],probe[1],probe[2],probe[3]);
+   boolean buriedOccluded=probePixels>=100&&buriedPixels<=Math.max(4,buriedNoise*4);
+   result.put("buriedProbePixels",probePixels);result.put("buriedChangedPixels",buriedPixels);
+   result.put("buriedNoisePixels",buriedNoise);result.put("buriedOccluded",buriedOccluded);
+   passed&=buriedOccluded;
+  }
+  if(scene.name.equals("grounded-terrain-occluded-control"))passed&=renders>0;
+  if(grounded())result.put("groundRadius",GROUND_RADIUS);
   result.put("case",scene.name);result.put("tracked",tracked);result.put("summonAge",age);result.put("embedded",tracked&&((CelestialNailEntity)entity).isEmbedded());
   result.put("expectedVisible",expected);result.put("visiblePixels",pixelVisible);result.put("changedPixels",pixels);
   result.put("noisePixels",noise);result.put("renders",renders);result.put("passed",passed);

@@ -99,9 +99,17 @@ allows compatible culling consumers to inspect the full visual extent while
 preserving Nail distance/frustum checks and terrain depth testing. It does not
 certify every third-party culling mod or change server tracking distance.
 
-The packaged Extras matrix now requires twelve camera cases per absent/present
-launch: six floating and six embedded. Grounded cases verify the synchronized
+The packaged Extras matrix now requires thirteen camera cases per absent/present
+launch: six floating and seven embedded. Grounded cases verify the synchronized
 embedded phase, a solid ground plane hiding the buried body, vertical and horizontal
 anchor cutoffs, both viewing angles and offscreen/missing-draw controls. New runtime
 results are recorded on the PR; the dated 2026-10-02 results above cover floating
 cases only.
+
+Grounded fixtures use a 385x385 ground plane spanning all camera sightlines. Visible
+cases additionally compare a projected strip of buried-body pixels against the
+hidden reference and require those pixels to stay occluded while the exposed
+monument remains visible. A fully buried terrain control raises that plane above
+the entire model and requires renderer calls with no visible Nail pixels. The report
+validator rejects missing probes, terrain too small, buried leaks and draw-free
+terrain controls.

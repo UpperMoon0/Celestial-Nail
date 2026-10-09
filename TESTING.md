@@ -421,9 +421,9 @@ The compositor now checks OpenGL 3.3 or ARB sampler-object support before sample
 
 ## Grounded Nail culling regressions
 
-The active packaged Sodium Extras matrix requires twelve final-image cases per
+The active packaged Sodium Extras matrix requires thirteen final-image cases per
 launch, with Extras absent and present on each of the four applicable targets.
-Six cases retain floating coverage; six use a saved embedded Nail with a buried
+Six cases retain floating coverage; seven use a saved embedded Nail with a buried
 anchor and a stone ground plane. Reports must confirm the actual embedded phase,
 expected lifecycle clock, real tracking, renderer admission and final framebuffer
 pixels. The same transformed dispatcher checks enforce both cutoff exemptions,
@@ -438,3 +438,11 @@ Embedded impact bounds conservatively include the wide effect region, so an
 offscreen grounded body may still reach the renderer. That control requires zero
 visible final pixels; it permits renderer admission. Missing-draw controls require
 zero renderer calls, and every visible case requires both draws and visible pixels.
+
+Grounded fixtures use a 385x385 ground plane spanning all camera sightlines. Visible
+cases additionally compare a projected strip of buried-body pixels against the
+hidden reference and require those pixels to stay occluded while the exposed
+monument remains visible. A fully buried terrain control raises that plane above
+the entire model and requires renderer calls with no visible Nail pixels. The report
+validator rejects missing probes, terrain too small, buried leaks and draw-free
+terrain controls.
