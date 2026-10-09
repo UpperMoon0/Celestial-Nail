@@ -25,13 +25,19 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
   new Scene("angle-left",-100,180,-100,false,false),
   new Scene("angle-right",100,180,-100,false,false),
   new Scene("offscreen-control",0,180,-150,true,false),
-  new Scene("missing-draw-control",0,180,-150,false,true));
+  new Scene("missing-draw-control",0,180,-150,false,true),
+  new Scene("grounded-horizontal-cutoff",0,260,-150,false,false),
+  new Scene("grounded-vertical-cutoff",0,285,-40,false,false),
+  new Scene("grounded-angle-left",-100,260,-100,false,false),
+  new Scene("grounded-angle-right",100,260,-100,false,false),
+  new Scene("grounded-offscreen-control",0,260,-150,true,false),
+  new Scene("grounded-missing-draw-control",0,260,-150,false,true));
  private final Minecraft mc=Minecraft.getInstance();
  private final Map<String,Object> report=new LinkedHashMap<>();
  private final List<Map<String,Object>> cases=new ArrayList<>();
  private final Path output=mc.gameDirectory.toPath().resolve("evidence");
  private final long started=System.nanoTime();
- private boolean requested,done;
+ private boolean requested,done,groundedAssertionsRun;
  private int index,stage,frames,entityId;
  private Scene scene;
  private float yaw,pitch;
@@ -68,11 +74,12 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
    if(setup==null) startScene();
   } catch(Throwable e) {finish(e);}
  }
+ private boolean grounded() { return scene.name.startsWith("grounded-"); }
  private void startScene() {
   if(index==SCENES.size()) {finish(null);return;}
   scene=SCENES.get(index);LogUtils.getLogger().info("[NailCompatTest] Scene {}",scene.name);stage=0;frames=0;SodiumExtrasTestHooks.hideNail=true;
   yaw=(float)Math.toDegrees(-Math.atan2(-scene.x,-scene.z))+(scene.offscreen?180:0);
-  pitch=(float)Math.toDegrees(Math.atan2(scene.y-236,Math.hypot(scene.x,scene.z)));
+  pitch=(float)Math.toDegrees(Math.atan2(scene.y-(grounded()?259:236),Math.hypot(scene.x,scene.z)));
   var server=mc.getSingleplayerServer();var playerId=mc.player.getUUID();
   setup=CompletableFuture.runAsync(()->{
    var level=server.overworld();var player=server.getPlayerList().getPlayer(playerId);
@@ -87,9 +94,17 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
    player.teleportTo(level,scene.x,scene.y-player.getEyeHeight(),scene.z,yaw,pitch);
    var nail=SodiumExtrasAssertions.nailType().create(level);
    if(nail==null) throw new IllegalStateException("Nail factory failed");
-   nail.setPos(0,200,0);nail.configure("compat_fixture_"+index,4);nail.beginSummoning(1);
+   nail.setPos(0,200,0);nail.configure("compat_fixture_"+index,grounded()?32:4);nail.beginSummoning(1);
    var tag=new CompoundTag();nail.saveWithoutId(tag);
-   tag.putLong("SummonTime",CLOCK-300);tag.putLong("LaunchTime",-1);tag.putLong("ImpactTime",-1);tag.putLong("CrumbleTime",-1);
+   tag.putLong("SummonTime",CLOCK-(grounded()?3000:300));tag.putLong("LaunchTime",-1);tag.putLong("ImpactTime",-1);tag.putLong("CrumbleTime",-1);
+   if(grounded()) {
+    tag.putByte("Phase",(byte)3);tag.putLong("LaunchTime",CLOCK-2000);
+    tag.putLong("ImpactTime",CLOCK-1000);tag.putFloat("ImpactYExact",244.96F);
+    tag.putBoolean("BlastCleared",true);
+    // A solid ground plane hides the buried body; only the exposed monument may draw.
+    for(int x=-24;x<=24;x++)for(int z=-24;z<=24;z++)
+     level.setBlock(new net.minecraft.core.BlockPos(x,244,z),net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(),2);
+   }
    nail.load(tag);nail.setCustomNameVisible(false);level.addFreshEntity(nail);entityId=nail.getId();
   },server);
  }
@@ -106,6 +121,10 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
   if(done||setup==null||!setup.isDone()||mc.level==null||mc.player==null) return;
   try {
    if(mc.level.getEntity(entityId)==null) {if(++frames>600)throw new AssertionError("Nail never tracked");return;}
+   if(grounded()&&!groundedAssertionsRun) {
+    SodiumExtrasAssertions.grounded(mc,(CelestialNailEntity)mc.level.getEntity(entityId),report);
+    groundedAssertionsRun=true;
+   }
    if(++frames<(stage==0?120:45)) return;frames=0;
    if(stage==0) {hiddenA=Screenshot.takeScreenshot(mc.getMainRenderTarget());stage=1;}
    else if(stage==1) {
@@ -134,9 +153,9 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
   var entity=mc.level.getEntity(entityId);
   boolean tracked=entity instanceof CelestialNailEntity;
   float age=tracked?((CelestialNailEntity)entity).summonAge(0):-1;
-  boolean passed=tracked&&Math.abs(age-300)<.01&&pixelVisible==expected&&(expected?renders>0:renders==0);
+  boolean passed=tracked&&Math.abs(age-(grounded()?3000:300))<.01&&((CelestialNailEntity)entity).isEmbedded()==grounded()&&pixelVisible==expected&&(expected?renders>0:renders==0);
   var result=new LinkedHashMap<String,Object>();
-  result.put("case",scene.name);result.put("tracked",tracked);result.put("summonAge",age);
+  result.put("case",scene.name);result.put("tracked",tracked);result.put("summonAge",age);result.put("embedded",tracked&&((CelestialNailEntity)entity).isEmbedded());
   result.put("expectedVisible",expected);result.put("visiblePixels",pixelVisible);result.put("changedPixels",pixels);
   result.put("noisePixels",noise);result.put("renders",renders);result.put("passed",passed);
   result.put("camera",List.of(scene.x,scene.y,scene.z,yaw,pitch));cases.add(result);

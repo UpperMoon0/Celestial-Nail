@@ -11,7 +11,8 @@ def complete_report():
     return {"passed": True, "complete": True, "extrasPresent": True,
             "cullingAssertions": sorted(BASE_ASSERTIONS | EXTRAS_ASSERTIONS),
             "expectedCases": len(CASES), "cases": [
-                {"case": name, "camera": CAMERAS[name]+[0,0], "passed": True, "tracked": True, "summonAge": 300,
+                {"case": name, "camera": CAMERAS[name]+[0,0], "passed": True, "tracked": True, "summonAge": 3000 if name.startswith("grounded-") else 300,
+                 "embedded": name.startswith("grounded-"),
                  "expectedVisible": not name.endswith("-control"),
                  "visiblePixels": not name.endswith("-control"),
                  "renders": 0 if name.endswith("-control") else 45}
@@ -42,6 +43,12 @@ class CompatEvidenceTest(unittest.TestCase):
                 fixture.unlink()
                 with self.assertRaisesRegex(ValueError,'Missing compatibility fixture.*0.1.5'):
                     runtime_artifact_paths(target,root,repository)
+
+    def test_rejects_floating_entity_in_grounded_case(self):
+        report = complete_report()
+        case = next(case for case in report["cases"] if case["case"].startswith("grounded-"))
+        case["embedded"] = False
+        with self.assertRaises(ValueError): validate_report(report, True)
 
     def test_complete_report(self):
         validate_report(complete_report(), True)

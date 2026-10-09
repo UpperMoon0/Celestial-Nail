@@ -46,6 +46,25 @@ public final class NailRuntimeGameTests {
             m.setAccessible(true);m.invoke(n,level,pos,new Vec3(pos.getX()+.5,pos.getY(),pos.getZ()+.5)); }
         catch(ReflectiveOperationException e){throw new AssertionError(e);}
     }
+    @GameTest(template="empty",timeoutTicks=20,batch="nail_visibility")
+    public static void buriedAnchorBoundsIncludeImpactOriginAcrossScales(GameTestHelper h) {
+        var level=h.getLevel();var base=h.absolutePos(new BlockPos(2,2,2));
+        for(float scale:new float[]{.1F,1F,4F}) for(float power:new float[]{4F,32F,128F}) {
+            var n=nail(level,base,"bounds",power);n.beginSummoning(scale);
+            double originY=n.getY();
+            n.setPos(n.getX(),originY-com.nstut.celestialnail.CataclysmTimeline.pierceDepth(power,n.nailHeight(),100),n.getZ());
+            for(byte phase:new byte[]{2,3,4}) {
+                var tag=save(n);tag.putByte("Phase",phase);tag.putFloat("ImpactYExact",(float)originY);
+                tag.putLong("ImpactTime",level.getGameTime());n.load(tag);
+                var bounds=n.visualBounds();
+                h.assertTrue(bounds.maxY>=originY,"Buried anchor excluded the impact surface at scale "+scale+" power "+power);
+                h.assertTrue(n.getBoundingBoxForCulling().equals(bounds),"Native culling omitted Nail effects in phase "+phase);
+                h.assertTrue(n.shouldRender(n.getX(),originY+85,n.getZ()+40),"Vertical anchor cutoff rejected Nail");
+                h.assertFalse(n.shouldRender(n.getX()+4000,originY,n.getZ()),"Own distance limit stopped applying");
+            }
+        }
+        h.succeed();
+    }
     @GameTest(template="empty",timeoutTicks=20,batch="nail_lifecycle")
     public static void removedEntityCannotTickOrAcquireTickets(GameTestHelper h) {
         var level=h.getLevel(); var n=nail(level,h.absolutePos(new BlockPos(2,2,2)),"removed",4);

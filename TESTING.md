@@ -418,3 +418,18 @@ Anime impact presentation lasts 750 ms on the monotonic first-render clock. Inde
 On 2026-10-03, the authored impact sequence passed 76 final-image cases across vanilla and Oculus/Complementary modes with Embeddium and Sodium Extras. The full run passed 74 cases; two Off controls correctly showed no effect but had an erroneous visible-image expectation. After fixing only that fixture expectation, `python tools/run_render_regression.py --case cinematic-sequence-off-control` passed both controls. `build/anime-impact-verification.json` validates the combined 76 cases and records both source reports. All five production targets built, 36 shared tests and 16 Python validator tests passed. Runtime shader coverage remains Forge 1.20.1.
 
 The compositor now checks OpenGL 3.3 or ARB sampler-object support before sampler queries, overrides and restoration. OpenGL 3.2-only contexts skip those operations and use the scratch textures' filtering parameters. All five targets rebuilt, 36 Java and 56 Python tests passed for this capability-guard follow-up. No fresh visual clients or 3.2-only hardware tests were run; the saved 76-case visual evidence predates this guard.
+
+## Grounded Nail culling regressions
+
+The active packaged Sodium Extras matrix requires twelve final-image cases per
+launch, with Extras absent and present on each of the four applicable targets.
+Six cases retain floating coverage; six use a saved embedded Nail with a buried
+anchor and a stone ground plane. Reports must confirm the actual embedded phase,
+expected lifecycle clock, real tracking, renderer admission and final framebuffer
+pixels. The same transformed dispatcher checks enforce both cutoff exemptions,
+frustum rejection and Nail's own distance limit on the grounded state.
+
+`buriedAnchorBoundsIncludeImpactOriginAcrossScales` covers small/default/large
+scales and low/default/high powers in impact, embedded and crumbling phases on
+NeoForge 1.21.1. It checks surface-origin containment and the native culling bounds
+contract. The other game adapters receive the same correction and build coverage.
