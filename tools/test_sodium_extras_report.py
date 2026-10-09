@@ -17,7 +17,7 @@ def complete_report():
                  "visiblePixels": not name.endswith("-control"),
                  "renders": 45 if not name.endswith("-control") or name == "grounded-terrain-occluded-control" else 0,
                  "groundRadius": 192, "buriedOccluded": True, "buriedProbePixels": 140,
-                 "buriedChangedPixels": 0, "buriedNoisePixels": 0}
+                 "buriedChangedPixels": 0, "buriedNoisePixels": 0, "noisePixels": 0}
                 for name in sorted(CASES)]}
 
 class CompatEvidenceTest(unittest.TestCase):
@@ -61,7 +61,7 @@ class CompatEvidenceTest(unittest.TestCase):
         with self.assertRaises(ValueError): validate_report(report, True)
 
     def test_requires_occluded_buried_pixels_in_visible_grounded_cases(self):
-        for key, value in (("groundRadius",24),("buriedOccluded",False),("buriedProbePixels",0),
+        for key, value in (("groundRadius",24),("noisePixels",527),("buriedOccluded",False),("buriedProbePixels",0),
                            ("buriedChangedPixels",40),("buriedNoisePixels",-1)):
             report = complete_report()
             case = next(c for c in report["cases"] if c["case"] == "grounded-horizontal-cutoff")

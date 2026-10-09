@@ -58,6 +58,8 @@ def validate_report(report, present):
                (("passed", True), ("tracked", True), ("expectedVisible", expected), ("visiblePixels", expected))):
             raise ValueError("Invalid image evidence: " + case["case"])
         if case["case"].startswith("grounded-"):
+            if not 0 <= case.get("noisePixels", -1) <= 20:
+                raise ValueError("Ground reference was not stable before the visible capture")
             if case.get("groundRadius", 0) < 192:
                 raise ValueError("Ground does not cover camera sightlines")
             if expected and (case.get("buriedOccluded") is not True or case.get("buriedProbePixels", 0) < 100

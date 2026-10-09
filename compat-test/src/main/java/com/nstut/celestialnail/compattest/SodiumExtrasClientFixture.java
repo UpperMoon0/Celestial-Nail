@@ -136,6 +136,11 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
    if(stage==0) {hiddenA=Screenshot.takeScreenshot(mc.getMainRenderTarget());stage=1;}
    else if(stage==1) {
     hiddenB=Screenshot.takeScreenshot(mc.getMainRenderTarget());
+    // The large ground plane can still be uploading meshes after initial tracking.
+    // Wait for a stable hidden reference rather than letting terrain noise mask the monument.
+    if(grounded()&&changed(hiddenA,hiddenB)>20) {
+     hiddenA.close();hiddenA=hiddenB;hiddenB=null;return;
+    }
     SodiumExtrasTestHooks.hideNail=scene.suppress;drawStart=SodiumExtrasTestHooks.renders;stage=2;
    } else {
     try(var visible=Screenshot.takeScreenshot(mc.getMainRenderTarget())) {evaluate(visible);}

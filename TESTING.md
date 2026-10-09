@@ -446,3 +446,7 @@ monument remains visible. A fully buried terrain control raises that plane above
 the entire model and requires renderer calls with no visible Nail pixels. The report
 validator rejects missing probes, terrain too small, buried leaks and draw-free
 terrain controls.
+
+Grounded hidden-reference pairs must stabilize to at most twenty changed pixels
+before the visible capture begins. This waits for large terrain meshes to finish
+uploading and prevents their loading noise from masking the exposed monument.
