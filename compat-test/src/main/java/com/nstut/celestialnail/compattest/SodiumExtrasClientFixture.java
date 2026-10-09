@@ -108,7 +108,7 @@ public final class SodiumExtrasClientFixture implements SodiumExtrasTestHooks.Dr
     boolean buried=scene.name.equals("grounded-terrain-occluded-control");
     if(!groundReady||buried) {
      for(int x=-GROUND_RADIUS;x<=GROUND_RADIUS;x++)for(int z=-GROUND_RADIUS;z<=GROUND_RADIUS;z++)
-      level.setBlock(new net.minecraft.core.BlockPos(x,buried?320:244,z),net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(),2);
+      level.setBlock(new net.minecraft.core.BlockPos(x,buried?319:244,z),net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(),2);
      groundReady=true;
     }
    }
