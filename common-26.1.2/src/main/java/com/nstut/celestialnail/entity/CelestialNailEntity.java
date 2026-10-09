@@ -188,11 +188,6 @@ public final class CelestialNailEntity extends Entity {
         double range=Math.max(512, nailHeight()*12);
         return distance < range*range;
     }
-    @Override
-    public AABB getBoundingBoxForCulling() {
-        // Culling consumers must see the same geometry as the Nail renderer, even below ground.
-        return visualBounds();
-    }
     public AABB visualBounds() {
         if(isCrumbling())return new AABB(getX()-nailHeight(),getY()-nailHeight()*3,getZ()-nailHeight(),getX()+nailHeight(),Math.max(getY()+nailHeight(),portalY()),getZ()+nailHeight());
         if(isImpacting())return new AABB(getX()-768,getY()-power(),getZ()-768,getX()+768,

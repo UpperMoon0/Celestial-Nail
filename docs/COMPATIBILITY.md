@@ -91,8 +91,10 @@ registered entities. There are no additional entity types to exempt.
 
 Impact bounds now include the ground-surface effect origin independently of the
 buried anchor. Previously, a small Nail with high power could have its surface
-effects above the bounds used for frustum culling. All three game-version adapters
-also expose `visualBounds()` through native `getBoundingBoxForCulling()`. This
+effects above the bounds used for frustum culling. The 1.20.1 and 1.21.1 adapters
+also expose `visualBounds()` through native entity `getBoundingBoxForCulling()`;
+26.1.2 already supplies those bounds through its renderer because that game version
+removed the entity method. This
 allows compatible culling consumers to inspect the full visual extent while
 preserving Nail distance/frustum checks and terrain depth testing. It does not
 certify every third-party culling mod or change server tracking distance.
