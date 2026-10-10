@@ -35,7 +35,7 @@ Fabric Loader must be **0.18.4+**. The NeoForge 1.21.1 artifact requires NeoForg
 
 Nail currently develops and tests against Boom 1.1.3; metadata accepts `>=1.1.3 <2.0.0`. That range does not certify untested future versions. See [compatibility](docs/COMPATIBILITY.md) for full setup and conflict notes.
 
-Celestial Nail 0.1.4 automatically exempts Nails from Sodium Extras distance culling on Fabric/Forge 1.20.1 and Fabric/NeoForge 1.21.1. Sodium Extras remains optional; Nail's own distance and frustum checks still apply. See [the tested combinations and workaround](docs/COMPATIBILITY.md#sodium-extras-distance-culling).
+Celestial Nail 0.1.4 automatically exempts Nails from Sodium Extras distance culling on Fabric/Forge 1.20.1 and Fabric/NeoForge 1.21.1. Sodium Extras remains optional; Nail's own distance and frustum checks still apply. The exemption covers both floating and grounded Nails because they share one entity type. Version 0.1.6 also corrects buried-anchor impact bounds. See [the tested combinations and workaround](docs/COMPATIBILITY.md#sodium-extras-distance-culling).
 
 ## Quick start
 

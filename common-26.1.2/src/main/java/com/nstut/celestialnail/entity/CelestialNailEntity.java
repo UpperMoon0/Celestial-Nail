@@ -190,7 +190,8 @@ public final class CelestialNailEntity extends Entity {
     }
     public AABB visualBounds() {
         if(isCrumbling())return new AABB(getX()-nailHeight(),getY()-nailHeight()*3,getZ()-nailHeight(),getX()+nailHeight(),Math.max(getY()+nailHeight(),portalY()),getZ()+nailHeight());
-        if(isImpacting())return new AABB(getX()-768,getY()-power(),getZ()-768,getX()+768,getY()+nailHeight()*5,getZ()+768);
+        if(isImpacting())return new AABB(getX()-768,getY()-power(),getZ()-768,getX()+768,
+                Math.max(getY()+nailHeight(),impactOrigin().y+nailHeight()*5),getZ()+768);
         double h=nailHeight(), r=h*.65;
         return new AABB(this.getX()-r, this.getY()-h*.02, this.getZ()-r,
                 this.getX()+r, Math.max(this.getY()+h, portalY()+h*1.4), this.getZ()+r);

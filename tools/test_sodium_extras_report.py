@@ -11,10 +11,13 @@ def complete_report():
     return {"passed": True, "complete": True, "extrasPresent": True,
             "cullingAssertions": sorted(BASE_ASSERTIONS | EXTRAS_ASSERTIONS),
             "expectedCases": len(CASES), "cases": [
-                {"case": name, "camera": CAMERAS[name]+[0,0], "passed": True, "tracked": True, "summonAge": 300,
+                {"case": name, "camera": CAMERAS[name]+[0,0], "passed": True, "tracked": True, "summonAge": 3000 if name.startswith("grounded-") else 300,
+                 "embedded": name.startswith("grounded-"),
                  "expectedVisible": not name.endswith("-control"),
                  "visiblePixels": not name.endswith("-control"),
-                 "renders": 0 if name.endswith("-control") else 45}
+                 "renders": 45 if not name.endswith("-control") or name == "grounded-terrain-occluded-control" else 0,
+                 "groundRadius": 192, "buriedOccluded": True, "buriedProbePixels": 140,
+                 "buriedChangedPixels": 0, "buriedNoisePixels": 0, "noisePixels": 0}
                 for name in sorted(CASES)]}
 
 class CompatEvidenceTest(unittest.TestCase):
@@ -42,6 +45,35 @@ class CompatEvidenceTest(unittest.TestCase):
                 fixture.unlink()
                 with self.assertRaisesRegex(ValueError,'Missing compatibility fixture.*0.1.5'):
                     runtime_artifact_paths(target,root,repository)
+
+    def test_rejects_floating_entity_in_grounded_case(self):
+        report = complete_report()
+        case = next(case for case in report["cases"] if case["case"].startswith("grounded-"))
+        case["embedded"] = False
+        with self.assertRaises(ValueError): validate_report(report, True)
+
+    def test_grounded_offscreen_bounds_may_admit_a_draw_but_pixels_must_stay_hidden(self):
+        report = complete_report()
+        case = next(case for case in report["cases"] if case["case"] == "grounded-offscreen-control")
+        case["renders"] = 45
+        validate_report(report, True)
+        case["visiblePixels"] = True
+        with self.assertRaises(ValueError): validate_report(report, True)
+
+    def test_requires_occluded_buried_pixels_in_visible_grounded_cases(self):
+        for key, value in (("groundRadius",24),("noisePixels",527),("buriedOccluded",False),("buriedProbePixels",0),
+                           ("buriedChangedPixels",40),("buriedNoisePixels",-1)):
+            report = complete_report()
+            case = next(c for c in report["cases"] if c["case"] == "grounded-horizontal-cutoff")
+            case[key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError): validate_report(report,True)
+
+    def test_terrain_control_requires_actual_draws_and_no_visible_pixels(self):
+        for key,value in (("renders",0),("visiblePixels",True)):
+            report = complete_report()
+            case = next(c for c in report["cases"] if c["case"] == "grounded-terrain-occluded-control")
+            case[key] = value
+            with self.subTest(key=key),self.assertRaises(ValueError):validate_report(report,True)
 
     def test_complete_report(self):
         validate_report(complete_report(), True)

@@ -17,9 +17,15 @@ TARGETS = {"forge-1.20.1": "47.4.0", "fabric-1.20.1": "0.18.4",
 CASES = {"horizontal-cutoff", "vertical-cutoff", "angle-left", "angle-right",
          "offscreen-control", "missing-draw-control"}
 
+CASES |= {"grounded-" + name for name in tuple(CASES)}
+CASES.add("grounded-terrain-occluded-control")
+
 BASE_ASSERTIONS = {"optional mod presence", "Nail survives vertical anchor cutoff",
                    "Nail survives horizontal anchor cutoff", "Nail still respects frustum",
-                   "Nail still respects its own distance limit"}
+                   "Nail still respects its own distance limit", "Grounded fixture is embedded",
+                   "Grounded native culling bounds match visual bounds", "Grounded Nail survives vertical anchor cutoff",
+                   "Grounded Nail survives horizontal anchor cutoff", "Grounded Nail still respects frustum",
+                   "Grounded Nail still respects its own distance limit"}
 EXTRAS_ASSERTIONS = {"Nail exemption on first lookup", "Nail exemption on cached lookup",
                     "ordinary entity remains subject to culling", "user whitelist remains respected",
                     "ordinary control passes renderer visibility", "ordinary entity vertical cutoff",
@@ -28,6 +34,11 @@ EXTRAS_ASSERTIONS = {"Nail exemption on first lookup", "Nail exemption on cached
 CAMERAS = {"horizontal-cutoff": [0,180,-150], "vertical-cutoff": [0,115,-40],
            "angle-left": [-100,180,-100], "angle-right": [100,180,-100],
            "offscreen-control": [0,180,-150], "missing-draw-control": [0,180,-150]}
+
+CAMERAS.update({"grounded-" + name: [camera[0], 285 if name == "vertical-cutoff" else 260, camera[2]]
+                for name, camera in tuple(CAMERAS.items())})
+
+CAMERAS["grounded-terrain-occluded-control"] = [0,360,-150]
 
 def validate_report(report, present):
     cases = report.get("cases", [])
@@ -46,7 +57,17 @@ def validate_report(report, present):
         if any(case.get(key) is not value for key, value in
                (("passed", True), ("tracked", True), ("expectedVisible", expected), ("visiblePixels", expected))):
             raise ValueError("Invalid image evidence: " + case["case"])
-        if abs(case.get("summonAge", -1) - 300) > .01 or (case.get("renders", 0) > 0) is not expected:
+        if case["case"].startswith("grounded-"):
+            if not 0 <= case.get("noisePixels", -1) <= 20:
+                raise ValueError("Ground reference was not stable before the visible capture")
+            if case.get("groundRadius", 0) < 192:
+                raise ValueError("Ground does not cover camera sightlines")
+            if expected and (case.get("buriedOccluded") is not True or case.get("buriedProbePixels", 0) < 100
+                             or case.get("buriedChangedPixels", -1) < 0 or case.get("buriedNoisePixels", -1) < 0
+                             or case["buriedChangedPixels"] > max(4, case["buriedNoisePixels"] * 4)):
+                raise ValueError("Buried-body pixels are not proven occluded")
+        draw_expected = expected or case["case"] == "grounded-terrain-occluded-control"
+        if case.get("embedded") is not case["case"].startswith("grounded-") or abs(case.get("summonAge", -1) - (3000 if case["case"].startswith("grounded-") else 300)) > .01 or (case["case"] != "grounded-offscreen-control" and (case.get("renders", 0) > 0) is not draw_expected):
             raise ValueError("Incorrect lifecycle/draw control: " + case["case"])
 
 def production_jar(target):

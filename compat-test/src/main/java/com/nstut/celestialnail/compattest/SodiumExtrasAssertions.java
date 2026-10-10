@@ -63,6 +63,17 @@ public final class SodiumExtrasAssertions {
             }
  results.put("cullingAssertions",java.util.List.copyOf(checks));
  }
+ public static void grounded(Minecraft mc, CelestialNailEntity nail, Map<String,Object> results) {
+  var dispatcher = mc.getEntityRenderDispatcher();
+  double x=nail.getX(), y=nail.getY(), z=nail.getZ();
+  require(nail.isEmbedded(), "Grounded fixture is embedded");
+  require(nail.getBoundingBoxForCulling().equals(nail.visualBounds()), "Grounded native culling bounds match visual bounds");
+  require(dispatcher.shouldRender(nail, frustum(true), x, y+85, z-40), "Grounded Nail survives vertical anchor cutoff");
+  require(dispatcher.shouldRender(nail, frustum(true), x, y+60, z-150), "Grounded Nail survives horizontal anchor cutoff");
+  require(!dispatcher.shouldRender(nail, frustum(false), x, y+60, z-150), "Grounded Nail still respects frustum");
+  require(!dispatcher.shouldRender(nail, frustum(true), x-2000, y+60, z), "Grounded Nail still respects its own distance limit");
+  results.put("cullingAssertions",java.util.List.copyOf(checks));
+ }
  private static Frustum frustum(boolean visible) {
   return new Frustum(new Matrix4f(),new Matrix4f()) {
    @Override public boolean isVisible(AABB bounds) { return visible; }

@@ -80,3 +80,36 @@ Report the exact command, game/loader/mod versions, `latest.log`, and any crash 
 All five targets have build coverage. The isolated complete-impact regressions run on NeoForge 1.21.1. That suite is not a five-target visual, multiplayer, or performance certification. See [TESTING.md](../TESTING.md) and [the runtime audit](runtime-audit.md).
 
 For full command operation see [USAGE.md](../USAGE.md); for automation and Java integration boundaries see [INTEGRATION.md](../INTEGRATION.md).
+
+## Grounded Nails and culling bounds (0.1.6)
+
+The floating and grounded Nail are lifecycle phases of the same
+`celestial_nail:celestial_nail` entity type. The existing optional Sodium Extras
+exemption covers both, including restored saves; no second whitelist ID is needed.
+The portal, fragments, shockwave and dust are rendered effects, not separately
+registered entities. There are no additional entity types to exempt.
+
+Impact bounds now include the ground-surface effect origin independently of the
+buried anchor. Previously, a small Nail with high power could have its surface
+effects above the bounds used for frustum culling. The 1.20.1 and 1.21.1 adapters
+also expose `visualBounds()` through native entity `getBoundingBoxForCulling()`;
+26.1.2 already supplies those bounds through its renderer because that game version
+removed the entity method. This
+allows compatible culling consumers to inspect the full visual extent while
+preserving Nail distance/frustum checks and terrain depth testing. It does not
+certify every third-party culling mod or change server tracking distance.
+
+The packaged Extras matrix now requires thirteen camera cases per absent/present
+launch: six floating and seven embedded. Grounded cases verify the synchronized
+embedded phase, a solid ground plane hiding the buried body, vertical and horizontal
+anchor cutoffs, both viewing angles and offscreen/missing-draw controls. New runtime
+results are recorded on the PR; the dated 2026-10-02 results above cover floating
+cases only.
+
+Grounded fixtures use a 385x385 ground plane spanning all camera sightlines. Visible
+cases additionally compare a projected strip of buried-body pixels against the
+hidden reference and require those pixels to stay occluded while the exposed
+monument remains visible. A fully buried terrain control raises that plane above
+the entire model and requires renderer calls with no visible Nail pixels. The report
+validator rejects missing probes, terrain too small, buried leaks and draw-free
+terrain controls.
